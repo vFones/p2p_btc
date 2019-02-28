@@ -1,0 +1,28 @@
+@startuml
+agent wallet0
+agent wallet1
+
+storage peer2peer{
+  node peer0
+  node peer1
+  node peer2
+  node peer3
+}
+database server
+
+peer0 -- peer2
+peer1 -- peer3
+peer3 -- peer0
+peer0 -- peer1
+
+wallet0 -> peer2
+wallet1 -> peer1
+wallet0 ~~> server
+wallet1 ~~> server
+
+peer0 ~~> server
+peer1 ~~> server
+peer2 ~~> server
+peer3 ~~> server
+
+@enduml

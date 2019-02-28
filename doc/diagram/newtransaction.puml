@@ -1,0 +1,8 @@
+@startuml
+hnote over Wallet: creazione transazione
+Wallet->Peer: invio transazione
+Wallet<-Peer: <short conferma>
+hnote over Peer: **sincronizzazione** in blockchain
+hnote over Peer: **flooding**
+
+@enduml

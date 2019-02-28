@@ -1,0 +1,14 @@
+@startuml
+activate Peer
+Wallet->Peer: richiesta bilancio
+Peer->Wallet: numero di elementi da inviare
+loop numero di elementi
+  Wallet<-Peer: transazioni
+end
+deactivate Peer
+activate Wallet
+loop numero di elementi
+  hnote over Wallet:calcolo ammontare
+end
+deactivate Wallet
+@enduml

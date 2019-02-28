@@ -1,0 +1,24 @@
+@startuml
+activate Server
+
+Wallet -> Server: **AUTENTIFICAZIONE tramite SHA256**
+alt conferma token
+  Server -> Wallet: conferma
+  Wallet -> Server: richiesta di aggancio a peer
+  alt se la rete esiste
+    Server -> Wallet: peer random a cui connetterti
+    deactivate Server
+    activate Peer
+    Wallet -> Peer: richiesta aggangio al peer scelto
+    alt se wallet mi aggiunge alla sua lista
+      Peer -> Wallet: <short conferma>
+    else aggiunta non riuscita
+     Wallet <- Peer: <short errore>
+     note left: exit
+     deactivate Peer
+    end
+  else la rete non è ancora creata
+    Server -> Wallet: entità NULL e chiusura comunicazione
+  end
+end
+@enduml
