@@ -1,7 +1,8 @@
 #ifndef SOCKWRAP_H
 #define SOCKWRAP_H
 
-#define BACKLOG 1024
+#define BACKLOG 128 // depends on machine
+// take it from '/proc/sys/net/core/somaxconn' otherwise it will be truncated.
 
 #include <sys/errno.h>
 #include <sys/types.h>
