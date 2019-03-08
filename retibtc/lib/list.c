@@ -1,10 +1,10 @@
-#include <list.h>
+#include "../include/list.h"
 
 List create_list()
 {
-  List newlist = (List) obj_malloc(LIST);
+  List newlist = (List)Malloc(LIST);
 
-  newlist->head = (Node) obj_malloc(NODE);
+  newlist->head = (Node)Malloc(NODE);
   newlist->head->info = NULL;
   newlist->head->next = NULL;
   newlist->tail = newlist->head;
@@ -23,7 +23,7 @@ int add_to_list(List l, void* info)
     return -1;
   }
 
-  Node newnode = (Node) obj_malloc(NODE);
+  Node newnode = (Node)Malloc(NODE);
   newnode->info = info;
   newnode->next = NULL;
 
@@ -123,7 +123,6 @@ int search_by_info(List l, void* info, COMPARE_NODE_INFO)
 
   if (tmp->info == NULL || info == NULL)
   {
-    errno = EBADNODE;
     return -1;
   }
   i = 1;
@@ -144,16 +143,10 @@ void* search_by_index(List l, int index)
   int i = 0;
 
   if(index < 1 || index > l->count)
-  {
-    errno = EBADINDEX;
     return NULL;
-  }
 
   if(is_list_empty(l))
-  {
-    errno = EBADLIST;
     return NULL;
-  }
 
   while( tmp != NULL && index != (++i) )
     tmp = tmp->next;
