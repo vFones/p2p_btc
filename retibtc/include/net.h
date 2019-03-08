@@ -9,70 +9,24 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include <fullio.h>
-#include <utils.h>
+#include "io.h"
 
 #define LEN_ADDRESS 32
 
-// rapid access to ip-port
-struct s_net_ent{
-  char addr[LEN_ADDRESS];
-  unsigned short port;
+struct connected_node{
+  int fd;
+  struct sockaddr_in node_addr;
 };
-
-#define NET_ENT sizeof(struct s_net_ent)
-typedef struct s_net_ent *Net_ent;
-/* wrapper di getsockname ma che restituisce l'indirizzo
-   del socket locale tramite Net_ent */
-int getsock_net_ent(int fd, Net_ent ent);
-
-/* wrapper di getpeername ma che restituisce l'indirizzo
-   del socket remoto tramite Net_ent */
-int getpeer_net_ent(int fd, Net_ent ent);
+#define CONN_NODE sizeof(struct connected_node)
+typedef struct connected_node* Conn_node;
 
 
-/*funzione per comparare due net_ent.
-  I puntatori sono di tipo void in modo da renderla compatibile
-  con la funzione search_by_info() di list.h*/
-bool compare_net_ent(void *x, void *y);
+void fillAddressIPv4(struct sockaddr_in *socket_address, char *ip_address, \
+  unsigned short port);
 
-/*funzione per visitare net_ent.
-  I puntatori sono di tipo void in modo da renderla compatibile
-  con la funzione visit_list() di list.h*/
-void visit_net_ent(void *args);
-
-//funzione per l'inizializzazione rapida di un indirizzo
-void fill_address(
-    struct sockaddr_in *  socket_address, /*struttura da riempire*/
-    sa_family_t           family, /*famiglia indirizzo (AF_INET)*/
-    char *                ip_address,  /*indirizzo IP dato in dotted_decimal*/
-    unsigned short                 port /*porta da assegnare*/
-  );
-
-bool sha_auth(int server_fd, char *pwd);
-
-//funzione per invio rapido di char
-int send_char(int fd, char n);
-//funzione per ricezione rapida di char
-int recv_char(int fd, char *n);
-
-
-//funzione per invio rapido di short
-int send_short(int fd, short n);
-//funzione per ricezione rapida di short
-int recv_short(int fd, short *n);
-
-//funzione per invio rapido di un int
-int send_int(int fd, int n);
-//funzione per ricezione rapida di un int
-int recv_int(int fd, int *n);
-
-
-//funzione per invio rapido di net_ent
-int send_net_ent(int fd, Net_ent n);
-//funzione per ricezione rapida di net_ent
-int recv_net_ent(int fd, Net_ent n);
-
+Conn_node getConnectedNode(int fd, Conn_node n);
+void visitConnectedNode(void *args);
+bool compare_connected_node(void *x, void *y);
 
 
 #endif
