@@ -1,26 +1,9 @@
 #ifndef P2P_H
 #define P2P_H
 
-//MACRO FOR REQUESTS MADE AT SERVER
-enum server_macro{
-  HOOK_PEER,
-  RE_HOOK_PEER,
-  HOOK_WALLET,
-  RE_HOOK_WALLET
-};
-
-//MACRO FOR REQUESTS MADE AT
-enum peer_macro{
-  HOOK_P2P,
-  HOOK_W2P,
-  W_BALANCE,
-  W_TRANSACTION,
-  P_BLOCK,
-  SHUTDOWN_NET
-};
-
-//MACRO FOR WALLET
-enum wallet_macro{
+enum node_macro{
+  NODE_CONNECTION,
+  WALLET_CONNECTION,
   TRANSACTION
 };
 
