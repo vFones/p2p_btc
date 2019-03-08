@@ -1,9 +1,7 @@
 #include <string.h>
-#include <openssl/sha.h>
-
 #include <utils.h>
 
-void* obj_malloc(size_t size)
+void* Malloc(size_t size)
 {
   void* block;
   block  = malloc(size);
@@ -17,11 +15,8 @@ void* obj_malloc(size_t size)
 }
 
 
-void calculate_hash(char pwd[BUFFLEN], unsigned char *hash)
+void usage(char *msg)
 {
-  SHA256_CTX context;
-  SHA256_Init(&context);
-  SHA256_Update(&context, pwd, strlen(pwd));
-  SHA256_Final(hash, &context);
-
+  fprintf(stderr, msg);
+  exit(EXIT_FAILURE);
 }
