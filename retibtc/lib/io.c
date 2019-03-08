@@ -1,25 +1,25 @@
-#include <fullio.h>
+#include "../include/io.h"
 
-ssize_t full_read(int fd, void *buff, size_t count)
+ssize_t Read(int fd, void *buff, size_t count)
 {
   size_t nleft;
   ssize_t nread;
   char * buf = (char*) buff;
   nleft = count;
   while (nleft > 0)
-  {  /* repeat until no left */
+  {
     if( (nread = read(fd, buf, nleft)) < 0)
     {
-      if (errno == EINTR) /* if interrupted by system call */
-	      continue; /* repeat the loop */
+      if (errno == EINTR)
+        continue;
       /*if errno is not EINTR, print errno and return negative nread */
-      perror("full_read");
+      perror("full read");
       return nread;
-
     }
     else
       if(nread == 0) /* if EOF */
-        break; /* break loop here */
+        break;
+
     /*if you are here, you have actually read bytes*/
     nleft -= nread; /* set left to read */
     buf += nread; /* set pointer */
@@ -29,27 +29,73 @@ ssize_t full_read(int fd, void *buff, size_t count)
 
 
 
-ssize_t full_write(int fd, const void *buf, size_t count)
+ssize_t Write(int fd, const void *buf, size_t count)
 {
   size_t nleft;
   ssize_t nwritten;
 
   nleft = count;
   while (nleft > 0)
-  { /*repeat until no left */
+  {
     if( (nwritten = write(fd, buf, nleft)) < 0)
     {
       if(errno == EINTR)
-      { /* if interrupted by system call */
-	      continue; /* repeat the loop */
-      }
+        continue;
       /*if errno is not EINTR, print errno and return negative nwritten */
-      perror("full_write");
+      perror("full write");
       return nwritten;
     }
+
     /*if you are here, you have actually write bytes*/
     buf = (char*)buf + nwritten; /* set pointer */
     nleft -= nwritten;/* set left to write */
   }
   return nleft;
+}
+
+
+int sendInt(int fd, int n)
+{
+  char buf[16];
+  memset((void*) buf, 0, 16);
+  sprintf(buf, "%d", n);
+  if( Write(fd, buf, 16) != 0 )
+  {
+    perror("sendInt");
+    return -1;
+  }
+  return 0;
+}
+
+
+int recvInt(int fd, int *n)
+{
+  char buf[16];
+  if( Read(fd, buf, 16) != 0)
+  {
+    perror("recInt");
+    return -1;
+  }
+  sscanf(buf, "%d", n);
+  return 0;
+}
+
+int sendChar(int fd, char n)
+{
+  if( Write(fd, &n, 1) != 0 )
+  {
+    perror("sendChar");
+    return -1;
+  }
+  return 0;
+}
+
+int recvChar(int fd, char *n)
+{
+  if( Read(fd, n, 1) != 0)
+  {
+    perror("recChar");
+    return -1;
+  }
+  return 0;
 }
