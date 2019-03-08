@@ -60,3 +60,6 @@ Makefile
 
 # CLion folder
 .idea/
+
+# Mac OSX
+.DS_Store
