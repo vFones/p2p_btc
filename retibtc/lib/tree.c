@@ -63,7 +63,9 @@ void visit_tree(Tree t, VISIT_TREE_INFO)
   if(t == NULL)
     return;
 
-  visit_tree_info(t->info);
+  if(t->info != NULL)
+    visit_tree_info(t->info);
+
   while(t->siblings != NULL)
   {
     visit_tree_info(t->siblings);
