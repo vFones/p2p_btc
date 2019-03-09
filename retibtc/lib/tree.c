@@ -51,9 +51,24 @@ Tree search_in_tree(Tree t, void *arg, COMPARE_TREE_INFO)
   if(compare_tree_info(t->info, arg))
     return t;
 
-  if(search_in_tree(t->siblings, arg, compare_tree_info)!=NULL)
+  if(search_in_tree(t->siblings, arg, compare_tree_info) != NULL)
     return t->siblings;
 
   return (search_in_tree(t->kids, arg, compare_tree_info));
 
+}
+
+void visit_tree(Tree t, VISIT_TREE_INFO)
+{
+  if(t == NULL)
+    return;
+
+  visit_tree_info(t->info);
+  while(t->siblings != NULL)
+  {
+    visit_tree_info(t->siblings);
+    t = t->siblings;
+  }
+
+  visit_tree(t->kids, visit_tree_info);
 }
