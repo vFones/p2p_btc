@@ -51,7 +51,8 @@ static void connect_to_network()
         {
           printf("Connected to peer\n");
           to_conn->fd = fd;
-          add_to_list(connected_node, to_conn);
+          add_kid(connected_node, to_conn);
+          //add_to_list(connected_node, to_conn);
           succ_connection++;
         }
         else
@@ -61,7 +62,9 @@ static void connect_to_network()
     }
 
   printf("Connected to %d node\n", succ_connection);
-  visit_list(connected_node, visitConnectedNode);
+  visit_tree(connected_node, visitConnectedNode);
+
+  //visit_list(connected_node, visitConnectedNode);
 
   pthread_mutex_lock(&mutex);
     fd_open[to_conn->fd] = 1;
@@ -87,8 +90,8 @@ static void* node_connection(void* arg)
   pthread_mutex_lock(&mutex);
     fd_open[n->fd] = 1;
     if(n->fd > max_fd)
-      {max_fd = n->fd;}
-      add_to_list(connected_node, n);
+      max_fd = n->fd;
+    add_kid(connected_node, n); //TEST: add_kid
   pthread_mutex_unlock(&mutex);
 
   //download blockchain
@@ -128,7 +131,7 @@ void n_routine()
   Bind(list_fd, (struct sockaddr*)&my_server_addr);
   Listen(list_fd, BACKLOG);
 
-  connected_node = create_list();
+  connected_node = new_node(NULL);
 
   // used for select management and monitor
   int i_fd = 0, n_ready = 0;

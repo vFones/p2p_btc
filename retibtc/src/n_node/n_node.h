@@ -14,18 +14,17 @@
 
 #include "../../include/net.h"
 #include "../../include/p2p.h"
-#include "../../include/list.h"
+#include "../../include/tree.h"
+//#include "../../include/list.h"
 #include "../../include/sockwrap.h"
 
-
-#define USAGE "Usage: ./n_node [-n node service port] [-w wallet service port]\n"
+#define MSG "Usage: ./n_node [-n node service port] [-w wallet service port]\n"
 
 short node_port;
 short wallet_port;
 
-
 struct sockaddr_in *node_info;
-List connected_node;
+Tree connected_node;
 
 pthread_mutex_t mutex;
 pthread_mutexattr_t mutexattr;
