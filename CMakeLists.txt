@@ -4,6 +4,11 @@ cmake_minimum_required(VERSION 3.10.2[...3.13.4])
 project(retiBTC)
 
 #set gcc flags and requirements
+if(${CMAKE_SYSTEM_NAME} MATCHES Darwin)
+  set(CMAKE_C_COMPILER gcc-8)
+endif()
+message(STATUS "Using C compiler: ${CMAKE_C_COMPILER}")
+
 set(CMAKE_C_FLAGS "-Wall -Wextra -pedantic -o3 -g -pthread")
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -26,14 +31,14 @@ set(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR})
 find_package(OpenSSL REQUIRED)
 if( OpenSSL_FOUND )
   set(OPENSSL_USE_STATIC_LIBS TRUE)
-  #  if(${CMAKE_SYSTEM_NAME} MATCHES Darwin)
-  #    set(OPENSSL_ROOT_DIR /usr/local/opt/openssl)
-  #    set(OPENSSL_LIBRARIES /usr/local/opt/openssl/lib)
-  #    set(OPENSSL_INCLUDE_DIR /usr/local/opt/openssl/include/)
-  #  endif()
-  #  message(STATUS "Using OpenSSL ${OPENSSL_VERSION}")
-  #  message("OpenSSL include dir: ${OPENSSL_INCLUDE_DIR}")
-  #  message("OpenSSL libraries: ${OPENSSL_LIBRARIES}")
+    if(${CMAKE_SYSTEM_NAME} MATCHES Darwin)
+      set(OPENSSL_ROOT_DIR /usr/local/opt/openssl)
+      set(OPENSSL_LIBRARIES /usr/local/opt/openssl/lib)
+      set(OPENSSL_INCLUDE_DIR /usr/local/opt/openssl/include/)
+    endif()
+    message(STATUS "Using OpenSSL ${OPENSSL_VERSION}")
+    message(STATUS "OpenSSL include dir: ${OPENSSL_INCLUDE_DIR}")
+    message(STATUS "OpenSSL libraries: ${OPENSSL_LIBRARIES}")
 endif()
 
 #add all files in lib/ as libraries
@@ -41,7 +46,7 @@ AUX_SOURCE_DIRECTORY(${RETIBTC}/lib LIBS_FILES)
 add_library(libraries ${LIBS_FILES})
 
 #link libraries to executable
-set(N_NODE_LIBS ${RETIBTC}/src/n_node/n_node.c)
+set(N_NODE_LIBS ${RETIBTC}/src/n_node/node_handler.c ${RETIBTC}/src/n_node/wallet_handler.c)
 add_executable(n_node ${RETIBTC}/src/n_node/main.c ${N_NODE_LIBS})
 target_link_libraries(n_node libraries OpenSSL::SSL)
 
