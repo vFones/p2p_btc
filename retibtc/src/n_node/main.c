@@ -1,6 +1,4 @@
-#include "main_proc.h"
-
-
+#include "n_node.h"
 
 
 int main(int argc, char **argv)
@@ -18,13 +16,14 @@ int main(int argc, char **argv)
       case 'w':
         wallet_port = (unsigned short)atoi(optarg);
         flags[1] = 1;
+        break;
       default:
         flags[2] = 1;
         break;
     }
   }
   if( !flags[0] || !flags[1] || flags[2] )
-    usage();
+    usage(MSG);
   free(flags);
 
   pthread_mutexattr_init(&mutexattr);
@@ -52,8 +51,8 @@ int main(int argc, char **argv)
   //   // TODO: change wait(NULL2) to SIGCHLD handler with p_select
   // }
 
-  // if (node_server == 0)
-  //   n_routine();
+  if (node_server == 0)
+    n_routine();
 
 
   // TODO: process used to serve wallet
@@ -65,6 +64,7 @@ int main(int argc, char **argv)
   //main process
   if(node_server) // && wallet_server)
   {
+    wait(&node_server);
     //fprintf(stderr, "[%d] forked into [%d] and [%d]\n", getpid(), node_server, wallet_server);
 
     pthread_mutex_destroy(&mutex);
