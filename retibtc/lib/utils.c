@@ -1,5 +1,6 @@
 #include <string.h>
-#include <utils.h>
+
+#include "../include/utils.h"
 
 void* Malloc(size_t size)
 {
@@ -17,6 +18,6 @@ void* Malloc(size_t size)
 
 void usage(char *msg)
 {
-  fprintf(stderr, msg);
+  fprintf(stderr,"%s\n",msg);
   exit(EXIT_FAILURE);
 }
