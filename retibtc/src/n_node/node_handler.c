@@ -18,48 +18,48 @@ static void connect_to_network()
   // try to connect to node_n node
   // TODO: check ip address and retry
   // TODO: check port
-    while (i < node_n)
+  while (i < node_n)
+  {
+    printf("Node [%d]", i);
+
+    printf("\nInsert a valid IPv4 address: ");
+    scanf(" %s", buffer);
+    strncpy(addr, buffer, 32);
+
+    printf("Insert a valid port address: ");
+    scanf(" %hd", &port);
+
+    printf("Are those info correct? Press [y] to retry, any other char to skip node\n");
+    scanf(" %c", &c);
+
+    if(c == 'y')
     {
-      printf("Node [%d]", i);
+      int fd = Socket(AF_INET, SOCK_STREAM, 0);
+      if ( (to_conn = (Conn_node)malloc(CONN_NODE) ) == NULL)
+        perror("malloc");
 
-      printf("\nInsert a valid IPv4 address: ");
-      scanf(" %s", buffer);
-      strncpy(addr, buffer, 32);
+      fillAddressIPv4(&to_conn->node_addr, addr, port);
+      Connect(fd, (struct sockaddr *)&to_conn->node_addr);
 
-      printf("Insert a valid port address: ");
-      scanf(" %hd", &port);
+      sendInt(fd, NODE_CONNECTION);
 
-      printf("Are those info correct? Press [y] to retry, any other char to skip node\n");
-      scanf(" %c", &c);
+      visitConnectedNode(to_conn);
 
-      if(c == 'y')
+      recvInt(fd, &response);
+      //if response is positive add to my list.
+      if(response)
       {
-        int fd = Socket(AF_INET, SOCK_STREAM, 0);
-        if ( (to_conn = (Conn_node)malloc(CONN_NODE) ) == NULL)
-          perror("malloc");
-
-        fillAddressIPv4(&to_conn->node_addr, addr, port);
-        Connect(fd, (struct sockaddr *)&to_conn->node_addr);
-
-        sendInt(fd, NODE_CONNECTION);
-
-        visitConnectedNode(to_conn);
-
-        recvInt(fd, &response);
-        //if response is positive add to my list.
-        if(response)
-        {
-          printf("Connected to peer\n");
-          to_conn->fd = fd;
-          add_kid(connected_node, to_conn);
-          //add_to_list(connected_node, to_conn);
-          succ_connection++;
-        }
-        else
-          printf("Node didn't accept, skip and go on");
+        printf("Connected to peer\n");
+        to_conn->fd = fd;
+        add_kid(connected_node, to_conn);
+        //add_to_list(connected_node, to_conn);
+        succ_connection++;
       }
-      i++;
+      else
+        printf("Node didn't accept, skip and go on");
     }
+    i++;
+  }
 
   printf("Connected to %d node\n", succ_connection);
   visit_tree(connected_node, visitConnectedNode);
