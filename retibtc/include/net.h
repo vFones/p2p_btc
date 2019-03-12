@@ -20,6 +20,10 @@ struct connected_node{
 #define CONN_NODE sizeof(struct connected_node)
 typedef struct connected_node* Conn_node;
 
+struct new_conn_node{
+  Conn_node node;
+  char confirm;
+};
 
 void fillAddressIPv4(struct sockaddr_in *socket_address, char *ip_address, \
   unsigned short port);

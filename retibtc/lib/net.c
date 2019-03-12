@@ -17,6 +17,7 @@ void fillAddressIPv4(struct sockaddr_in *socket_address, char *ip_address, unsig
   }
   else
     socket_address->sin_addr.s_addr = INADDR_ANY;
+  printf("filled s_addr with %s:%hd",inet_ntoa(socket_address->sin_addr), ntohs(socket_address->sin_port));
 }
 
 
@@ -48,11 +49,12 @@ void visitConnectedNode(void *args)
 
 bool compare_by_addr(void *x, void *y)
 {
-  Conn_node a = (Conn_node) x;
-  Conn_node b = (Conn_node) y;
-  //TODO: check node_addr compare why is not working
-  if( ( memcmp(&(a->node_addr), &(b->node_addr), sizeof(struct sockaddr_in)) == 0) &&
-      ( ntohs(a->node_addr.sin_port) == ntohs(b->node_addr.sin_port) ) )
+  struct new_conn_node a = *(struct new_conn_node *) x;
+  struct new_conn_node b = *(struct new_conn_node *) y;
+  printf("Comparing a->%s:%hu && b->%s:%hu", inet_ntoa(a.node->node_addr.sin_addr), ntohs(a.node->node_addr.sin_port), inet_ntoa(b.node->node_addr.sin_addr),ntohs(b.node->node_addr.sin_port));
+  
+  if( ( strncmp(inet_ntoa(a.node->node_addr.sin_addr), inet_ntoa(b.node->node_addr.sin_addr), LEN_ADDRESS) ) && 
+      (ntohs(a.node->node_addr.sin_port) == ntohs(b.node->node_addr.sin_port)) )
     return true;
   return false;
 }

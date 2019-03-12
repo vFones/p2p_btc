@@ -2,24 +2,19 @@
 
 static pthread_mutex_t mtx_tree;
 
-struct new_conn_node{
-  Conn_node node;
-  char confirm;
-};
-
-
 
 static struct new_conn_node choose_node()
 {
   //char buffer[256];
   char addr[LEN_ADDRESS];
+  char buffer[BUFFLEN];
   short port = 0;
   struct new_conn_node node;
   node.node = NULL;
 
   printf("\nInsert a valid IPv4 address: ");
-  scanf(" %s", addr);
-  //strncpy(addr , buffer, 32);
+  scanf(" %s", buffer);
+  strncpy(addr , buffer, 32);
 
   printf("Insert a valid port address: ");
   scanf(" %hd", &port);
@@ -77,7 +72,7 @@ static void connect_to_network()
         succ_connection++;
       }
       else
-        printf("Node didn't accept, skip and go on");
+        printf("Node didn't accept, skip and go on\n");
     }
     i++;
   }
@@ -124,7 +119,9 @@ static void close_connection()
 {
   struct new_conn_node node = choose_node();
 
-  Tree found = search_in_tree(connected_node, (void *)&node.node, compare_by_addr);
+  printf("Closing connection with: %s:%hu", inet_ntoa(node.node->node_addr.sin_addr), ntohs(node.node->node_addr.sin_port));
+
+  Tree found = search_in_tree(connected_node, (void*)&node, compare_by_addr);
 
   if(found != NULL)
   {

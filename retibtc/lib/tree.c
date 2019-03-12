@@ -90,8 +90,9 @@ Tree search_in_tree(Tree t, void *arg, COMPARE_TREE_INFO)
   if(t == NULL || arg == NULL)
     return NULL;
 
-  if(compare_tree_info(t->info, arg))
-    return t;
+  if(t->info != NULL)
+    if(compare_tree_info(t->info, arg))
+      return t;
 
   if(search_in_tree(t->siblings, arg, compare_tree_info) != NULL)
     return t->siblings;
