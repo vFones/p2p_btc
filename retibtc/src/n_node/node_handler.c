@@ -3,37 +3,36 @@
 static pthread_mutex_t mtx_tree;
 
 
-static struct new_conn_node choose_node()
+static Conn_node choose_node()
 {
   //char buffer[256];
-  char addr[LEN_ADDRESS];
   char buffer[BUFFLEN];
-  short port = 0;
-  struct new_conn_node node;
-  node.node = NULL;
+
+  Conn_node new_conn = (Conn_node)Malloc(CONN_NODE);
 
   printf("\nInsert a valid IPv4 address: ");
   scanf(" %s", buffer);
-  strncpy(addr , buffer, 32);
+  strncpy(new_conn->address, buffer, 32);
 
   printf("Insert a valid port address: ");
-  scanf(" %hd", &port);
+  scanf(" %hd", &new_conn->port);
 
   printf("Are those info correct? Press [y] to retry, any other char to skip node\n");
-  scanf(" %c", &node.confirm);
-  if(node.confirm == 'y')
+  scanf(" %c", &new_conn->confirm);
+  if(new_conn->confirm == 'y')
+    return new_conn;
+  else
   {
-    node.node = (Conn_node)Malloc(CONN_NODE);
-    fillAddressIPv4(&(node.node->node_addr), addr, port);
+    printf("Info not correct\n");
+    return NULL;
   }
-  return node;
 }
 
 
 static void connect_to_network()
 {
   int node_n = 0, response = 0, i = 0;
-  struct new_conn_node node;
+  Conn_node new_conn;
 
   pthread_mutex_init(&mtx_tree, NULL);
 
@@ -49,25 +48,25 @@ static void connect_to_network()
   {
     printf("Node [%d]", i);
 
-    node = choose_node();
+    new_conn = choose_node();
 
-    if(node.confirm == 'y')
+    if(new_conn->confirm == 'y')
     {
       int fd = Socket(AF_INET, SOCK_STREAM, 0);
-
-      Connect(fd, (struct sockaddr *)&node.node->node_addr);
+      struct sockaddr_in tmp;
+      fillAddressIPv4(&tmp, new_conn->address, new_conn->port);
+      Connect(fd, (struct sockaddr *)&tmp);
       sendInt(fd, NODE_CONNECTION);
 
-      visitConnectedNode(node.node);
+      visitConnectedNode(new_conn);
 
       recvInt(fd, &response);
       //if response is positive add to my list.
       if(response)
       {
-        printf("Connected to peer\n");
-        node.node->fd = fd;
+        new_conn->fd = fd;
         pthread_mutex_lock(&mtx_tree);
-          create_kid_to_node(connected_node, node.node);
+          create_kid_to_node(connected_node, new_conn);
         pthread_mutex_unlock(&mtx_tree);
         succ_connection++;
       }
@@ -83,9 +82,9 @@ static void connect_to_network()
     visit_tree(connected_node, visitConnectedNode);
   pthread_mutex_unlock(&mtx_tree);
 
-  fd_open[node.node->fd] = 1;
-  if(node.node->fd > max_fd)
-    max_fd = node.node->fd;
+  fd_open[new_conn->fd] = 1;
+  if(new_conn->fd > max_fd)
+    max_fd = new_conn->fd;
 
   return;
 }
@@ -102,14 +101,15 @@ static void* node_connection(void* arg)
   sendInt(n->fd, 1);
 
   pthread_mutex_lock(&mtx_tree);
-    create_kid_to_node(connected_node, n); //TEST: add_kid
+    create_kid_to_node(connected_node, n);
   pthread_mutex_unlock(&mtx_tree);
 
   fd_open[n->fd] = 1;
   if(n->fd > max_fd)
     max_fd = n->fd;
 
-  //download blockchain
+  //TODO: download blockchain
+  fprintf(stderr,"Thread exiting\n");
   pthread_exit(NULL);
 }
 
@@ -117,24 +117,24 @@ static void* node_connection(void* arg)
 
 static void close_connection()
 {
-  struct new_conn_node node = choose_node();
+  Conn_node node = choose_node();
+  printf("Searching this node->");
+  visitConnectedNode(node);
 
-  printf("Closing connection with: %s:%hu", inet_ntoa(node.node->node_addr.sin_addr), ntohs(node.node->node_addr.sin_port));
-
-  Tree found = search_in_tree(connected_node, (void*)&node, compare_by_addr);
+  Tree found = remove_from_tree(connected_node, (void*)node, compare_by_addr);
 
   if(found != NULL)
   {
     printf("Found connected node with that IP:PORT\n");
     printf("*****Closing connection*****\n");
-    remove_from_tree(connected_node, found, compare_by_addr);
-    fd_open[node.node->fd] = 0;
-    close(node.node->fd);
+    fd_open[node->fd] = 0;
+    close(node->fd);
   }
   else
     printf("Node not found\n");
 
-  return;
+  fprintf(stderr,"Thread exiting\n");
+  pthread_exit(NULL);
 }
 
 

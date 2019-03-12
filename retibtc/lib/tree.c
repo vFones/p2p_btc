@@ -150,5 +150,5 @@ Tree remove_from_tree(Tree t, void *arg, COMPARE_TREE_INFO)
   if(has_node_siblings(found))
     add_sibling_to_node(found->prev_sibl, found->siblings);
 
-  return NULL;
+  return found;
 }

@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <sockwrap.h>
+#include <../include/sockwrap.h>
 
 int Socket(int domain, int type, int protocol)
 {

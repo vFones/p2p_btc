@@ -15,7 +15,6 @@
 #include "../../include/net.h"
 #include "../../include/p2p.h"
 #include "../../include/tree.h"
-//#include "../../include/list.h"
 #include "../../include/sockwrap.h"
 
 #define MSG "Usage: ./n_node [-n node service port] [-w wallet service port]\n"

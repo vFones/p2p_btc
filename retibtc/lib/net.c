@@ -17,7 +17,6 @@ void fillAddressIPv4(struct sockaddr_in *socket_address, char *ip_address, unsig
   }
   else
     socket_address->sin_addr.s_addr = INADDR_ANY;
-  printf("filled s_addr with %s:%hd",inet_ntoa(socket_address->sin_addr), ntohs(socket_address->sin_port));
 }
 
 
@@ -30,31 +29,30 @@ Conn_node getConnectedNode(int fd, Conn_node node)
     perror("getConnectedNode (getpeername)");
     return NULL;
   }
-  node->node_addr.sin_addr.s_addr = tmpaddr.sin_addr.s_addr;
-  node->node_addr.sin_family = AF_INET;
-  node->node_addr.sin_port = tmpaddr.sin_port;
+  strncpy(node->address, inet_ntoa(tmpaddr.sin_addr),LEN_ADDRESS);
+  node->port = ntohs(tmpaddr.sin_port);
   node->fd = fd;
-  return node; // return 0 on success
+  
+  return node;
 }
 
 
 void visitConnectedNode(void *args)
 {
   Conn_node n = (Conn_node)args;
-  printf("Node = %s:%hu\n", \
-    inet_ntoa(n->node_addr.sin_addr), \
-    ntohs(n->node_addr.sin_port));
+  printf("Node = %s:%hu\n", n->address, n->port);
 }
 
 
 bool compare_by_addr(void *x, void *y)
 {
-  struct new_conn_node a = *(struct new_conn_node *) x;
-  struct new_conn_node b = *(struct new_conn_node *) y;
-  printf("Comparing a->%s:%hu && b->%s:%hu", inet_ntoa(a.node->node_addr.sin_addr), ntohs(a.node->node_addr.sin_port), inet_ntoa(b.node->node_addr.sin_addr),ntohs(b.node->node_addr.sin_port));
-  
-  if( ( strncmp(inet_ntoa(a.node->node_addr.sin_addr), inet_ntoa(b.node->node_addr.sin_addr), LEN_ADDRESS) ) && 
-      (ntohs(a.node->node_addr.sin_port) == ntohs(b.node->node_addr.sin_port)) )
+  Conn_node a = (Conn_node) x;
+  Conn_node b = (Conn_node) y;
+  fprintf(stderr,"Comparing a->%s:%hu && b->%s:%hu\n", \
+    a->address, a->port, b->address, b->port);
+
+  if( !strncmp(a->address,b->address, LEN_ADDRESS) &&
+      (a->port == b->port) )
     return true;
   return false;
 }
