@@ -2,7 +2,6 @@
 
 static pthread_mutex_t mtx_tree;
 
-
 static Conn_node choose_node()
 {
   //char buffer[256];
@@ -110,7 +109,7 @@ static void* node_connection(void* arg)
 
   //TODO: download blockchain
   fprintf(stderr,"Thread exiting\n");
-  pthread_exit(NULL);
+  //pthread_exit(NULL);
 }
 
 
@@ -134,7 +133,7 @@ static void close_connection()
     printf("Node not found\n");
 
   fprintf(stderr,"Thread exiting\n");
-  pthread_exit(NULL);
+  //pthread_exit(NULL);
 }
 
 
