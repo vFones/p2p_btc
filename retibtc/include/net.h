@@ -26,7 +26,7 @@ void fillAddressIPv4(struct sockaddr_in *socket_address, char *ip_address, \
 
 Conn_node getConnectedNode(int fd, Conn_node n);
 void visitConnectedNode(void *args);
-bool compare_connected_node(void *x, void *y);
-
+bool compare_by_addr(void *x, void *y);
+bool compare_by_fd(void *x, void *y);
 
 #endif
