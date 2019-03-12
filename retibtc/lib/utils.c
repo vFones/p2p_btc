@@ -1,5 +1,3 @@
-#include <string.h>
-
 #include "../include/utils.h"
 
 void* Malloc(size_t size)
