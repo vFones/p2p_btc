@@ -26,8 +26,9 @@ short wallet_port;
 struct sockaddr_in *node_info;
 Tree connected_node;
 
-pthread_mutex_t mutex;
-pthread_mutexattr_t mutexattr;
+pthread_mutex_t mtx_fd;
+pthread_mutexattr_t mtx_fd_attr;
+
 
 int max_fd;
 int *fd_open;

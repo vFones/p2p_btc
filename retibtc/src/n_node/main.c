@@ -26,9 +26,9 @@ int main(int argc, char **argv)
     usage(MSG);
   free(flags);
 
-  pthread_mutexattr_init(&mutexattr);
-  pthread_mutexattr_setpshared(&mutexattr, PTHREAD_PROCESS_SHARED);
-  pthread_mutex_init(&mutex, &mutexattr);
+  // pthread_mutexattr_init(&mtx_fd_attr);
+  // pthread_mutexattr_setpshared(&mtx_fd_attr, PTHREAD_PROCESS_SHARED);
+  // pthread_mutex_init(&mtx_fd, &mtx_fd_attr);
 
 
   pid_t node_server;//, wallet_server;
@@ -67,9 +67,9 @@ int main(int argc, char **argv)
     wait(&node_server);
     //fprintf(stderr, "[%d] forked into [%d] and [%d]\n", getpid(), node_server, wallet_server);
 
-    pthread_mutex_destroy(&mutex);
-    pthread_mutexattr_destroy(&mutexattr);
-    exit(EXIT_SUCCESS);
+    // pthread_mutex_destroy(&mtx_fd);
+    // pthread_mutexattr_destroy(&mtx_fd_attr);
+    // exit(EXIT_SUCCESS);
 
   }
 
