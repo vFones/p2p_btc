@@ -5,21 +5,31 @@ Tree new_node(Tree parent, Tree prev_sibl, void *info)
   Tree new_tree = (Tree) Malloc(TREE_SIZE);
 
   if(parent != NULL)
-    new_tree->depth = parent->depth+1;
+  {
+    new_tree->parent = parent;
+    new_tree->depth = (parent->depth)+1;
+  }
   else
-    new_tree = 0;
-
-  new_tree->parent = parent;
-  new_tree->prev_sibl = prev_sibl;
+  {
+    new_tree->parent = NULL;
+    new_tree->depth = 0;
+  }
+  if(prev_sibl != NULL)
+    new_tree->prev_sibl = prev_sibl;
+  else
+    new_tree->prev_sibl = NULL;
   new_tree->siblings = NULL;
   new_tree->kids = NULL;
-  new_tree->info = info;
+  if(info == NULL)
+    new_tree->info = NULL;
+  else
+    new_tree->info = info;
 
   return new_tree;
 }
 
 
-Tree create_kids_to_node(Tree t, void *info)
+Tree create_kid_to_node(Tree t, void *info)
 {
   if (t == NULL)
     return NULL;
@@ -40,7 +50,9 @@ Tree create_sibling_to_node(Tree t, void *info)
   while(t->siblings != NULL)
     t = t->siblings;
 
-  return (t->siblings = new_node(t->parent, t, info));
+  t->siblings = new_node(t->parent, t, info);
+  t->siblings->depth = t->siblings->prev_sibl->depth;
+  return t->siblings;
 }
 
 
@@ -53,7 +65,7 @@ bool add_sibling_to_node(Tree t, Tree to_add)
     t = t->siblings;
 
   t->siblings = to_add;
-  to_add->prev_sibl = t->siblings;
+  to_add->prev_sibl = t;
   return true;
 }
 
@@ -66,23 +78,25 @@ bool add_kid_to_node(Tree t, Tree to_add)
   if (t->kids != NULL)
      add_sibling_to_node(t->kids, to_add);
   else
+  {
     t->kids = to_add;
-
+    to_add->depth = (t->depth)+1;
+  }
   return true;
 }
 
-Tree search_in_tree(Tree t, Tree node, COMPARE_TREE_INFO)
+Tree search_in_tree(Tree t, void *arg, COMPARE_TREE_INFO)
 {
-  if(t == NULL)
+  if(t == NULL || arg == NULL)
     return NULL;
 
-  if(compare_tree_info(t->info, node))
+  if(compare_tree_info(t->info, arg))
     return t;
 
-  if(search_in_tree(t->siblings, node, compare_tree_info) != NULL)
+  if(search_in_tree(t->siblings, arg, compare_tree_info) != NULL)
     return t->siblings;
 
-  return (search_in_tree(t->kids, node, compare_tree_info));
+  return (search_in_tree(t->kids, arg, compare_tree_info));
 }
 
 
@@ -122,13 +136,13 @@ bool has_node_siblings(Tree t)
 }
 
 
-Tree remove_from_tree(Tree t, Tree node, COMPARE_TREE_INFO)
+Tree remove_from_tree(Tree t, void *arg, COMPARE_TREE_INFO)
 {
-  if(t == NULL || node == NULL)
+  if(t == NULL || arg == NULL)
     return NULL;
 
   Tree found = NULL;
-  if( (found = search_in_tree(t, node, compare_tree_info)) != NULL)
+  if( (found = search_in_tree(t, arg, compare_tree_info)) != NULL)
     if(has_node_kids(found))
       add_kid_to_node(found->parent, found->kids);
 
