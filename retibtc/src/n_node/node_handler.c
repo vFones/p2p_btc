@@ -2,37 +2,41 @@
 
 static pthread_mutex_t mtx_tree;
 
-static Conn_node choose_node()
+struct confirm_new_node{
+  Conn_node node;
+  char confirm;
+};
+
+static struct confirm_new_node choose_node()
 {
   //char buffer[256];
   char buffer[BUFFLEN];
+  struct confirm_new_node new_node;
 
-  Conn_node new_conn = (Conn_node)Malloc(CONN_NODE);
+  new_node.node = (Conn_node)Malloc(CONN_NODE);
 
   printf("\nInsert a valid IPv4 address: ");
   scanf(" %s", buffer);
-  strncpy(new_conn->address, buffer, 32);
+  strncpy(new_node.node->address, buffer, 32);
 
   printf("Insert a valid port address: ");
-  scanf(" %hd", &new_conn->port);
+  scanf(" %hd", &new_node.node->port);
 
   printf("Are those info correct? Press [y] to retry, any other char to skip node\n");
-  scanf(" %c", &new_conn->confirm);
-  if(new_conn->confirm == 'y')
-    return new_conn;
+  scanf(" %c", &new_node.node->confirm);
+  if(new_node.node->confirm == 'y')
+    return new_node;
   else
   {
     printf("Info not correct\n");
-    return NULL;
+    return new_node;
   }
 }
 
 static void connect_to_network()
 {
   int node_n = 0, response = 0, i = 0;
-  Conn_node new_conn;
-
-  pthread_mutex_init(&mtx_tree, NULL);
+  struct confirm_new_node new_conn;
 
   printf("\nHow many node do you want to connect to?: ");
   fflush(stdin);
@@ -48,11 +52,11 @@ static void connect_to_network()
 
     new_conn = choose_node();
 
-    if(new_conn->confirm == 'y')
+    if(new_conn.confirm == 'y')
     {
       int fd = Socket(AF_INET, SOCK_STREAM, 0);
       struct sockaddr_in tmp;
-      fillAddressIPv4(&tmp, new_conn->address, new_conn->port);
+      fillAddressIPv4(&tmp, new_conn.node->address, new_conn.node->port);
       Connect(fd, (struct sockaddr *)&tmp);
       sendInt(fd, NODE_CONNECTION);
 
@@ -60,9 +64,9 @@ static void connect_to_network()
       //if response is positive add to my list.
       if(response)
       {
-        new_conn->fd = fd;
+        new_conn.node->fd = fd;
         pthread_mutex_lock(&mtx_tree);
-          create_kid_to_node(connected_node, new_conn);
+          create_kid_to_node(connected_node, new_conn.node);
         pthread_mutex_unlock(&mtx_tree);
         succ_connection++;
       }
@@ -78,9 +82,9 @@ static void connect_to_network()
     visit_tree(connected_node, visitConnectedNode);
   pthread_mutex_unlock(&mtx_tree);
 
-  fd_open[new_conn->fd] = 1;
-  if(new_conn->fd > max_fd)
-    max_fd = new_conn->fd;
+  fd_open[new_conn.node->fd] = 1;
+  if(new_conn.node->fd > max_fd)
+    max_fd = new_conn.node->fd;
 
   return;
 }
@@ -105,30 +109,27 @@ static void* node_connection(void* arg)
 
   //TODO: download blockchain
   fprintf(stderr,"node_connection: pthread exit\n");
-  //pthread_exit(NULL);
+  pthread_exit(NULL);
   return NULL;
 }
 
 static void close_connection()
 {
-  Conn_node node = choose_node();
+  struct confirm_new_node node = choose_node();
   printf("Searching this node->");
-  visitConnectedNode(node);
+  visitConnectedNode(node.node);
 
-  Tree found = remove_from_tree(connected_node, (void*)node, compare_by_addr);
+  Tree found = remove_from_tree(connected_node, (void*)node.node, compare_by_addr);
 
   if(found != NULL)
   {
     printf("Found connected node with that IP:PORT\n");
     printf("*****Closing connection*****\n");
-    fd_open[node->fd] = 0;
-    close(node->fd);
+    fd_open[node.node->fd] = 0;
+    close(node.node->fd);
   }
   else
     printf("Node not found\n");
-
-  fprintf(stderr,"Thread exiting\n");
-  //pthread_exit(NULL);
 }
 
 static void menu_case(int choice)
@@ -164,6 +165,8 @@ void n_routine()
   setsockopt(list_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(int));
   //binding address on list_fd and setting queue
 
+  pthread_mutex_init(&mtx_tree, NULL);
+
   struct sockaddr_in my_server_addr;
   fillAddressIPv4(&my_server_addr, NULL, node_port);
 
@@ -188,8 +191,8 @@ void n_routine()
   int choice = 0;
   char line_buffer[16];
 
+  //settin max_fd as list_fd and monitoring that on fd_open table
   fd_open = (int *)calloc(FD_SETSIZE, sizeof(int));
-
   max_fd = list_fd;
   fd_open[max_fd] = 1;
 
@@ -198,9 +201,10 @@ void n_routine()
     FD_ZERO(&fdset);
     FD_SET(STDIN_FILENO, &fdset);
     FD_SET(list_fd, &fdset);
+    //re update fdset with fd_open monitor table
     for (i_fd = 0; i_fd <= max_fd; i_fd++)
-    if (fd_open[i_fd])
-    FD_SET(i_fd, &fdset);
+      if (fd_open[i_fd])
+        FD_SET(i_fd, &fdset);
 
     while ( (n_ready = select(max_fd + 1, &fdset, NULL, NULL, NULL)) < 0 );
     if (n_ready < 0 )
@@ -210,7 +214,7 @@ void n_routine()
     }
 
     /*******************
-    STDIN menu_case
+        STDIN menu_case
     *******************/
     if(FD_ISSET(STDIN_FILENO, &fdset))
     {
@@ -218,7 +222,7 @@ void n_routine()
       printf("\tChoose:\n1) connect to peers;\n2) disconnect from peer\n5) quit\n");
       printf("Connected node:\n");
       visit_tree(connected_node, visitConnectedNode);
-      
+
       fflush(stdin);
       fgets(line_buffer, 16, stdin);
       choice = atoi(line_buffer);
@@ -226,7 +230,7 @@ void n_routine()
     }
 
     /***************************
-    Socket connections
+        Socket connections
     ***************************/
     if (FD_ISSET(list_fd, &fdset))
     {
@@ -239,12 +243,12 @@ void n_routine()
       }
       setsockopt(fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive));
 
-      // setting as ready for reading
+      // setting fd ready for reading
       fd_open[fd] = 1;
 
       //calculating new max
       if (max_fd < fd)
-      max_fd = fd;
+        max_fd = fd;
     }
     i_fd = list_fd;
 
@@ -275,20 +279,21 @@ void n_routine()
           //updating max fd with the last open in fd_open
           if (max_fd == i_fd)
           {
-            while (fd_open[--i_fd] == 0);
+            while (fd_open[--i_fd] == 0)
+              ;
             max_fd = i_fd;
             break;
           }
           continue;
         }
 
-        tid_args[tid_index] = i_fd;
+        tid_args[tid_index%BACKLOG] = i_fd;
         //request received correctly, switching between cases
         switch(request)
         {
           case NODE_CONNECTION:
-          pthread_create(&tid[tid_index], NULL, node_connection, (void *)&tid_args[tid_index]);
-          break;
+            pthread_create(&tid[tid_index%BACKLOG], NULL, node_connection, (void *)&tid_args[tid_index%BACKLOG]);
+            break;
           /*
           case WALLET_CONNECTION:
           wallet_connection();
@@ -298,14 +303,15 @@ void n_routine()
           break;
           */
           default:
-          fprintf(stderr, "Request received is not correct\n");
-          //print_menu();
-          break;
+            fprintf(stderr, "Wallet[%d]: request received is not correct\n", getpid());
+            //print_menu();
+            break;
         }
         tid_index++;
       }
     }
+    //TODO: move to handler
     for(int j=0; j < tid_index;  j++)
-    pthread_join(tid[j], NULL);
+      pthread_join(tid[j], NULL);
   }
 }
