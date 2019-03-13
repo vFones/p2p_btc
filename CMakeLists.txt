@@ -48,10 +48,10 @@ add_library(libraries ${LIBS_FILES})
 #link libraries to executable
 set(N_NODE_LIBS ${RETIBTC}/src/n_node/node_handler.c ${RETIBTC}/src/n_node/wallet_handler.c)
 add_executable(n_node ${RETIBTC}/src/n_node/main.c ${N_NODE_LIBS})
-target_link_libraries(n_node libraries OpenSSL::SSL)
+target_link_libraries(n_node libraries)
 
-#set(WALLET_LIBS src/wallet/wallet.c)
-#add_executable(wallet src/wallet/main.c ${WALLET_LIBS})
+set(WALLET_LIBS ${RETIBTC}/src/w_node/w_node.c)
+add_executable(w_node ${RETIBTC}/src/w_node/main.c ${WALLET_LIBS})
+target_link_libraries(w_node libraries)
 
 #target_link_libraries(peer libraries OpenSSL::SSL)
-#target_link_libraries(wallet libraries OpenSSL::SSL)

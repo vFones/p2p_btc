@@ -31,7 +31,9 @@ int main(int argc, char **argv)
   // pthread_mutex_init(&mtx_fd, &mtx_fd_attr);
 
 
-  pid_t node_server;//, wallet_server;
+  //initialized just to silent warning..;
+  pid_t node_server = 0;
+  pid_t wallet_server = 0;
   // process used to handle node connection
   if ((node_server = fork()) < 0)
   {
@@ -40,32 +42,30 @@ int main(int argc, char **argv)
   }
 
 
-  // main proc creating wallet proc
-  // if (node_server)
-  // {
-  //   if ((wallet_server = fork()) < 0)
-  //   {
-  //     perror("wallet_server fork()");
-  //     exit(EXIT_FAILURE);
-  //   }
-  //   // TODO: change wait(NULL2) to SIGCHLD handler with p_select
-  // }
+  //main proc creating wallet proc
+  if (node_server)
+  {
+    if ((wallet_server = fork()) < 0)
+    {
+      perror("wallet_server fork()");
+      exit(EXIT_FAILURE);
+    }
+    // TODO: change wait(NULL2) to SIGCHLD handler with p_select
+  }
 
   if (node_server == 0)
     n_routine();
 
 
   // TODO: process used to serve wallet
-  // if(wallet_server == 0)
-  //   fprintf(stderr, "I'm [%d] forked from [%d]\n", getpid(), getppid());
-  //   //w_routine();
-
+  if(wallet_server == 0)
+    w_routine();
 
   //main process
   if(node_server) // && wallet_server)
   {
     wait(&node_server);
-    //fprintf(stderr, "[%d] forked into [%d] and [%d]\n", getpid(), node_server, wallet_server);
+    fprintf(stderr, "[%d] forked into [%d] and [%d]\n", getpid(), node_server, wallet_server);
 
     // pthread_mutex_destroy(&mtx_fd);
     // pthread_mutexattr_destroy(&mtx_fd_attr);
