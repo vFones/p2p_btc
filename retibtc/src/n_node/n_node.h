@@ -13,20 +13,18 @@
 #include <sys/wait.h>
 
 #include "../../include/net.h"
-#include "../../include/p2p.h"
 #include "../../include/tree.h"
 #include "../../include/sockwrap.h"
+#include "../../include/transaction.h"
 
-#define MSG "Usage: ./n_node [-n node service port] [-w wallet service port]\n"
+#define MSG "Usage: ./n_node -n node <service_port> -w <wallet_service port>\n"
 
 short node_port;
 short wallet_port;
 
 struct sockaddr_in *node_info;
 Tree connected_node;
-
-pthread_mutex_t mtx_fd;
-pthread_mutexattr_t mtx_fd_attr;
+Tree connected_wallet;
 
 
 int max_fd;
@@ -34,5 +32,6 @@ int *fd_open;
 
 void usage();
 void n_routine();
+void w_routine();
 
 #endif
