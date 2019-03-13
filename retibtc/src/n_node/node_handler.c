@@ -27,7 +27,6 @@ static Conn_node choose_node()
   }
 }
 
-
 static void connect_to_network()
 {
   int node_n = 0, response = 0, i = 0;
@@ -56,8 +55,6 @@ static void connect_to_network()
       fillAddressIPv4(&tmp, new_conn->address, new_conn->port);
       Connect(fd, (struct sockaddr *)&tmp);
       sendInt(fd, NODE_CONNECTION);
-
-      visitConnectedNode(new_conn);
 
       recvInt(fd, &response);
       //if response is positive add to my list.
@@ -88,7 +85,6 @@ static void connect_to_network()
   return;
 }
 
-
 static void* node_connection(void* arg)
 {
   // adding node to my custom list after confirming
@@ -108,11 +104,10 @@ static void* node_connection(void* arg)
     max_fd = n->fd;
 
   //TODO: download blockchain
-  fprintf(stderr,"Thread exiting\n");
+  fprintf(stderr,"node_connection: pthread exit\n");
   //pthread_exit(NULL);
+  return NULL;
 }
-
-
 
 static void close_connection()
 {
@@ -135,7 +130,6 @@ static void close_connection()
   fprintf(stderr,"Thread exiting\n");
   //pthread_exit(NULL);
 }
-
 
 static void menu_case(int choice)
 {
@@ -208,8 +202,6 @@ void n_routine()
     if (fd_open[i_fd])
     FD_SET(i_fd, &fdset);
 
-    printf("Choose 1 to connection management, 5 to quit\n");
-
     while ( (n_ready = select(max_fd + 1, &fdset, NULL, NULL, NULL)) < 0 );
     if (n_ready < 0 )
     { /* on real error exit */
@@ -223,6 +215,10 @@ void n_routine()
     if(FD_ISSET(STDIN_FILENO, &fdset))
     {
       n_ready--;
+      printf("\tChoose:\n1) connect to peers;\n2) disconnect from peer\n5) quit\n");
+      printf("Connected node:\n");
+      visit_tree(connected_node, visitConnectedNode);
+      
       fflush(stdin);
       fgets(line_buffer, 16, stdin);
       choice = atoi(line_buffer);
@@ -273,11 +269,8 @@ void n_routine()
           close(i_fd);
           Tree found = search_in_tree(connected_node, (void *)&i_fd, compare_by_fd);
           if(found != NULL)
-          {
             remove_from_tree(connected_node, found, compare_by_fd);
-          }
           // TODO: removing from list if crashed
-          // TODO: if the list is empty must reconnect
 
           //updating max fd with the last open in fd_open
           if (max_fd == i_fd)
@@ -288,7 +281,6 @@ void n_routine()
           }
           continue;
         }
-
 
         tid_args[tid_index] = i_fd;
         //request received correctly, switching between cases

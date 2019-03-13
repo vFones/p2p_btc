@@ -6,7 +6,6 @@ void fillAddressIPv4(struct sockaddr_in *socket_address, char *ip_address, unsig
   memset((void *) socket_address, 0, sizeof(*socket_address));
   socket_address->sin_family = AF_INET;
   socket_address->sin_port = htons(port);
-  printf("String ip: %s\n", ip_address);
   if(ip_address != NULL)
   {
     if ((inet_pton(AF_INET, ip_address, &(socket_address->sin_addr))) <= 0)
@@ -32,7 +31,7 @@ Conn_node getConnectedNode(int fd, Conn_node node)
   strncpy(node->address, inet_ntoa(tmpaddr.sin_addr),LEN_ADDRESS);
   node->port = ntohs(tmpaddr.sin_port);
   node->fd = fd;
-  
+
   return node;
 }
 
@@ -48,8 +47,6 @@ bool compare_by_addr(void *x, void *y)
 {
   Conn_node a = (Conn_node) x;
   Conn_node b = (Conn_node) y;
-  fprintf(stderr,"Comparing a->%s:%hu && b->%s:%hu\n", \
-    a->address, a->port, b->address, b->port);
 
   if( !strncmp(a->address,b->address, LEN_ADDRESS) &&
       (a->port == b->port) )
