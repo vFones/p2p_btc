@@ -22,7 +22,6 @@ struct connected_node{
 #define CONN_NODE sizeof(struct connected_node)
 typedef struct connected_node* Conn_node;
 
-
 void fillAddressIPv4(struct sockaddr_in *socket_address, char *ip_address, \
   unsigned short port);
 

@@ -12,7 +12,7 @@ int Socket(int domain, int type, int protocol)
   if( ( fd = socket(domain, type, protocol) ) == -1)
   {
       perror("Socket");
-      exit(-1);
+      exit(EXIT_FAILURE);
   }
   return fd;
 }
@@ -24,7 +24,7 @@ int Connect(int sockfd, const struct sockaddr *addr)
   if(connect(sockfd, addr, len) == -1)
   {
     perror("Connect");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   return 0;
 }
@@ -36,7 +36,7 @@ int Bind(int sockfd, const struct sockaddr *addr)
   if(bind(sockfd, addr, len) == -1)
   {
     perror("Bind");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   return 0;
 }
@@ -46,7 +46,7 @@ int Listen(int sockfd, int backlog)
   if(listen(sockfd, backlog) == -1)
   {
     perror("Listen");
-    exit(-1);
+    exit(EXIT_FAILURE);
   }
   return 0;
 }
@@ -62,7 +62,7 @@ int Accept(int listfd, struct sockaddr *cli_add)
   if(conn_fd < 0)
   {
     perror("Accept");
-    exit(1);
+    exit(EXIT_FAILURE);
 	}
     return conn_fd;
 }
