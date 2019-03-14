@@ -131,11 +131,18 @@ bool has_node_kids(Tree t)
 bool has_node_siblings(Tree t)
 {
   if(t != NULL)
-    if(t->prev_sibl != NULL || t->siblings != NULL)
+    if(t->siblings != NULL)
       return true;
   return false;
 }
 
+bool has_node_prev_sibl(Tree t)
+{
+  if(t != NULL)
+    if(t->prev_sibl != NULL)
+      return true;
+  return false;
+}
 
 Tree remove_from_tree(Tree t, void *arg, COMPARE_TREE_INFO)
 {
@@ -150,10 +157,12 @@ Tree remove_from_tree(Tree t, void *arg, COMPARE_TREE_INFO)
     else
       found->parent->kids = NULL;
 
-    if(has_node_siblings(found))
-      add_sibling_to_node(found->prev_sibl, found->siblings);
-    else
+    if(has_node_prev_sibl(found))
+    {
+      if(has_node_siblings(found))
+        add_sibling_to_node(found->prev_sibl, found->siblings);
       found->prev_sibl->siblings = NULL;
+    }
   }
   return found;
 }
