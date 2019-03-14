@@ -14,6 +14,7 @@ struct transaction{
   short srcport;
   char dst[LEN_ADDRESS];
   short dstport;
+  float amount;
   int random;
 };
 #define TRNS_SIZE sizeof(struct transaction);

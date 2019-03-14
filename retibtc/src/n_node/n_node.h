@@ -7,17 +7,21 @@
 #include <unistd.h> // getopt
 #include <errno.h>
 #include <pthread.h>
-#include <sys/param.h> // max
+#include <sys/param.h> // MAX
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/stat.h> // mkfifo
+#include <fcntl.h> // open
 
+#include "../../include/io.h"
 #include "../../include/net.h"
 #include "../../include/tree.h"
 #include "../../include/sockwrap.h"
 #include "../../include/transaction.h"
 
 #define MSG "Usage: ./n_node -n node <service_port> -w <wallet_service port>\n"
+#define FIFOPATH "/tmp/wallet2node.fifo"
 
 short node_port;
 short wallet_port;
@@ -26,7 +30,7 @@ struct sockaddr_in *node_info;
 Tree connected_node;
 Tree connected_wallet;
 
-
+int fifo_fd;
 int max_fd;
 int *fd_open;
 

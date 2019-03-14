@@ -29,11 +29,13 @@ int main(int argc, char **argv)
   // pthread_mutexattr_init(&mtx_fd_attr);
   // pthread_mutexattr_setpshared(&mtx_fd_attr, PTHREAD_PROCESS_SHARED);
   // pthread_mutex_init(&mtx_fd, &mtx_fd_attr);
+  
+  mkfifo(FIFOPATH, 0664); // u+rw, g+rw, o+r
 
-
-  //initialized just to silent warning..;
+  //initialized just to silent warning..
   pid_t node_server = 0;
   pid_t wallet_server = 0;
+
   // process used to handle node connection
   if ((node_server = fork()) < 0)
   {

@@ -6,8 +6,8 @@
 #include <stdio.h> // perror
 #include <string.h> // memset()
 
-ssize_t fullRead(int fd, void *buf, size_t count);
-ssize_t fullWrite(int fd, const void *buf, size_t count);
+ssize_t Read(int fd, void *buf, size_t count);
+ssize_t Write(int fd, const void *buf, size_t count);
 
 int sendInt(int fd, int n);
 int recvInt(int fd, int *n);
