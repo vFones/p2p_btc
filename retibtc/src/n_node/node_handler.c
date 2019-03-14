@@ -13,7 +13,7 @@ static struct confirm_new_node choose_node()
   char buffer[BUFFLEN];
   struct confirm_new_node new_node;
 
-  new_node.node = (Conn_node)Malloc(CONN_NODE);
+  new_node.node = (Conn_node)Malloc(SIZE_NODE);
 
   printf("\nInsert a valid IPv4 address: ");
   scanf(" %s", buffer);
@@ -38,9 +38,9 @@ static void* fifo_handler()
   while(1)
   {
     struct transaction trns;
-    printf("handling fifos-> ");
+    printf("handling fifos\n");
     Read(fifo_fd, &trns, sizeof(trns));
-    printf("package from %s:%hu", trns.src, trns.srcport);
+    printf("package from %s:%hu\n", trns.src, trns.srcport);
     // TODO:
     pthread_exit(NULL);
   }
@@ -114,9 +114,9 @@ static void* node_connection(void* arg)
 {
   // adding node to my custom list after confirming
   int fd = *(int*)arg;
-  Conn_node n = (Conn_node)malloc(CONN_NODE);
+  Conn_node n = (Conn_node)malloc(SIZE_NODE);
 
-  n = getConnectedNode(fd, n);
+  n = getpeerNode(fd);
 
   sendInt(n->fd, 1);
 
@@ -191,7 +191,6 @@ void n_routine()
 
   //setting fd to monitor
   fifo_fd = open(FIFOPATH, O_RDWR);
-
   pthread_create(&fifotid, NULL, fifo_handler, NULL);
 
   list_fd = Socket(AF_INET, SOCK_STREAM, 0);
@@ -224,16 +223,17 @@ void n_routine()
   //settin max_fd as list_fd and monitoring that on fd_open table
   fd_open = (int *)calloc(FD_SETSIZE, sizeof(int));
 
-  fd_open[fifo_fd] = 1;
+  //fd_open[fifo_fd] = 1;
   fd_open[list_fd] = 1;
-  max_fd = (fifo_fd > list_fd) ? fifo_fd : list_fd;
+  //max_fd = (fifo_fd > list_fd) ? fifo_fd : list_fd;
+  max_fd = list_fd;
   // setting list_fd as max since fifo_fd is created before
 
   while (1)
   {
     FD_ZERO(&fdset);
     FD_SET(STDIN_FILENO, &fdset);
-    FD_SET(fifo_fd, &fdset);
+    //FD_SET(fifo_fd, &fdset);
     FD_SET(list_fd, &fdset);
     //re update fdset with fd_open monitor table
     for (i_fd = 0; i_fd <= max_fd; i_fd++)

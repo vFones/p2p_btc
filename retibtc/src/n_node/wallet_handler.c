@@ -7,8 +7,8 @@ static void* wallet_connection(void *arg)
 {
   //auth
   int fd = *(int*)arg;
-  Conn_node n = (Conn_node)malloc(CONN_NODE);
-  n = getConnectedNode(fd, n);
+  Conn_node n = (Conn_node)malloc(SIZE_NODE);
+  n = getpeerNode(fd);
 
   sendInt(n->fd, 1);
 

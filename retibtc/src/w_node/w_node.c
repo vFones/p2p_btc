@@ -127,7 +127,7 @@ static void menu_case(int choice)
 static void print_menu()
 {
   //system("clear");
-  printf("\n\nWallet address: %s:[%d]\nWallet balance: %5.2f \n \
+  printf("\n\nWallet address: %s:[%hu]\nWallet balance: %5.2f \n \
     1) Request amount of ViTC.\n \
     2) Make an exchange\n \
     3) Buy more ViCoin\n \
