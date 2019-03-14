@@ -10,6 +10,7 @@
 #include <stdbool.h>
 
 #include "io.h"
+#include "utils.h"
 
 #define LEN_ADDRESS 32
 
@@ -18,13 +19,15 @@ struct connected_node{
   char address[LEN_ADDRESS];
   short port;
 };
-#define CONN_NODE sizeof(struct connected_node)
+#define SIZE_NODE sizeof(struct connected_node)
 typedef struct connected_node* Conn_node;
 
 void fillAddressIPv4(struct sockaddr_in *socket_address, char *ip_address, \
   unsigned short port);
 
-Conn_node getConnectedNode(int fd, Conn_node n);
+Conn_node getsockNode(int fd);
+Conn_node getpeerNode(int fd);
+
 void visitConnectedNode(void *args);
 bool compare_connected_node(void *x, void *y);
 

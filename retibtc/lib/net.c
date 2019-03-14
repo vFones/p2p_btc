@@ -19,13 +19,34 @@ void fillAddressIPv4(struct sockaddr_in *socket_address, char *ip_address, unsig
 }
 
 
-Conn_node getConnectedNode(int fd, Conn_node node)
+Conn_node getsockNode(int fd)
 {
   struct sockaddr_in tmpaddr;
   socklen_t lentmpaddr = sizeof(tmpaddr);
+  Conn_node node = (Conn_node)Malloc(SIZE_NODE);
+
+  if(getsockname(fd, (struct sockaddr *) &tmpaddr, &lentmpaddr) == -1)
+  {
+    perror("getsockname -> Node:");
+    return NULL;
+  }
+  strncpy(node->address, inet_ntoa(tmpaddr.sin_addr),LEN_ADDRESS);
+  node->port = ntohs(tmpaddr.sin_port);
+  node->fd = fd;
+
+  return node;
+}
+
+
+Conn_node getpeerNode(int fd)
+{
+  struct sockaddr_in tmpaddr;
+  socklen_t lentmpaddr = sizeof(tmpaddr);
+  Conn_node node = (Conn_node)Malloc(SIZE_NODE);
+
   if( getpeername(fd, (struct sockaddr *) &tmpaddr, &lentmpaddr) == -1)
   {
-    perror("getConnectedNode (getpeername)");
+    perror("getpeername -> Node:");
     return NULL;
   }
   strncpy(node->address, inet_ntoa(tmpaddr.sin_addr),LEN_ADDRESS);
