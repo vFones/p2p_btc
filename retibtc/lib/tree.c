@@ -144,11 +144,16 @@ Tree remove_from_tree(Tree t, void *arg, COMPARE_TREE_INFO)
 
   Tree found = NULL;
   if( (found = search_in_tree(t, arg, compare_tree_info)) != NULL)
+  {
     if(has_node_kids(found))
       add_kid_to_node(found->parent, found->kids);
+    else
+      found->parent->kids = NULL;
 
-  if(has_node_siblings(found))
-    add_sibling_to_node(found->prev_sibl, found->siblings);
-
+    if(has_node_siblings(found))
+      add_sibling_to_node(found->prev_sibl, found->siblings);
+    else
+      found->prev_sibl->siblings = NULL;
+  }
   return found;
 }
