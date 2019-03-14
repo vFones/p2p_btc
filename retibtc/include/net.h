@@ -17,7 +17,6 @@ struct connected_node{
   int fd;
   char address[LEN_ADDRESS];
   short port;
-  char confirm;
 };
 #define CONN_NODE sizeof(struct connected_node)
 typedef struct connected_node* Conn_node;

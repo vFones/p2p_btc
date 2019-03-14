@@ -23,8 +23,8 @@ static struct confirm_new_node choose_node()
   scanf(" %hd", &new_node.node->port);
 
   printf("Are those info correct? Press [y] to retry, any other char to skip node\n");
-  scanf(" %c", &new_node.node->confirm);
-  if(new_node.node->confirm == 'y')
+  scanf(" %c", &new_node.confirm);
+  if(new_node.confirm == 'y')
     return new_node;
   else
   {

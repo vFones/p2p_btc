@@ -1,6 +1,6 @@
 ################ CMake #######################
 
-cmake_minimum_required(VERSION 3.10.2[...3.13.4])
+cmake_minimum_required(VERSION 3.7.2[...3.13.4])
 project(retiBTC)
 
 #set gcc flags and requirements
