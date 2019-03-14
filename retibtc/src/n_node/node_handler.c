@@ -116,7 +116,7 @@ static void* node_connection(void* arg)
 static void close_connection()
 {
   struct confirm_new_node node = choose_node();
-  printf("Searching this node->");
+  printf("Searching ->");
   visitConnectedNode(node.node);
 
   Tree found = remove_from_tree(connected_node, (void*)node.node, compare_by_addr);
@@ -124,12 +124,15 @@ static void close_connection()
   if(found != NULL)
   {
     printf("Found connected node with that IP:PORT\n");
-    printf("*****Closing connection*****\n");
+    printf("******Closing connection*****\n");
+    node.node = found->info;
+    visitConnectedNode(node.node);
     fd_open[node.node->fd] = 0;
     close(node.node->fd);
   }
   else
     printf("Node not found\n");
+  free(node.node);
 }
 
 static void menu_case(int choice)
@@ -271,9 +274,9 @@ void n_routine()
           //closing and choosing new max fd to monitor
           fd_open[i_fd] = 0;
           close(i_fd);
-          Tree found = search_in_tree(connected_node, (void *)&i_fd, compare_by_fd);
+          Tree found = remove_from_tree(connected_node, (void*)&i_fd, compare_by_fd);
           if(found != NULL)
-            remove_from_tree(connected_node, found, compare_by_fd);
+            free(found);
           // TODO: removing from list if crashed
 
           //updating max fd with the last open in fd_open
