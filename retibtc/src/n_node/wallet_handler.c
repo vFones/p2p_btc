@@ -25,7 +25,7 @@ static void* receive_transaction(void *arg)
 {
   int fd = *(int*)arg;
   struct transaction trns;
-  printf("Wallet_handler [%d] receiving transaction...\n", getpid());
+  printf("Wallet_handler [%d] receiving transaction...\n", (int)pthread_self());
   // receiv transaction from w_node and write down to node_handler
   Read(fd, &trns, sizeof(trns));
   Write(fifo_fd, &trns, sizeof(trns));
@@ -42,8 +42,7 @@ void w_routine()
   setsockopt(list_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(int));
   //binding address on list_fd and setting queue
 
-  mkfifo(FIFOPATH, 0664); // u+rw, g+rw, o+r
-  fifo_fd = open(FIFOPATH, O_WRONLY);
+  fifo_fd = open(FIFOPATH, O_RDWR);
 
   struct sockaddr_in my_server_addr;
   fillAddressIPv4(&my_server_addr, NULL, wallet_port);
@@ -130,9 +129,9 @@ void w_routine()
           //closing and choosing new max fd to monitor
           fd_open[i_fd] = 0;
           close(i_fd);
-          Tree found = search_in_tree(connected_wallet, (void *)&i_fd, compare_by_fd);
+          Tree found = remove_from_tree(connected_wallet, (void *)&i_fd, compare_by_fd);
           if(found != NULL)
-            remove_from_tree(connected_wallet, found, compare_by_fd);
+            free(found);
 
           //updating max fd with the last open in fd_open
           if (max_fd == i_fd)
@@ -161,5 +160,7 @@ void w_routine()
         tid_index++;
       }
     }
+    for(int j=0; j < tid_index;  j++)
+      pthread_join(tid[j], NULL);
   }
 }

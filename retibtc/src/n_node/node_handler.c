@@ -35,12 +35,15 @@ static struct confirm_new_node choose_node()
 
 static void* fifo_handler()
 {
-  struct transaction trns;
-  printf("handling fifos-> ");
-  Read(fifo_fd, &trns, sizeof(trns));
-  printf("package from %s:%hu",trns.src, trns.srcport);
-  // TODO:
-  pthread_exit(NULL);
+  while(1)
+  {
+    struct transaction trns;
+    printf("handling fifos-> ");
+    Read(fifo_fd, &trns, sizeof(trns));
+    printf("package from %s:%hu", trns.src, trns.srcport);
+    // TODO:
+    pthread_exit(NULL);
+  }
 }
 
 
@@ -182,12 +185,15 @@ void n_routine()
   int optval = 1;
   int list_fd = 0; // main FDs to monitor
   struct sockaddr_in my_server_addr;
-
+  pthread_t fifotid;
   //mutex dinamically allcoated
   pthread_mutex_init(&mtx_tree, NULL);
 
   //setting fd to monitor
   fifo_fd = open(FIFOPATH, O_RDWR);
+
+  pthread_create(&fifotid, NULL, fifo_handler, NULL);
+
   list_fd = Socket(AF_INET, SOCK_STREAM, 0);
 
   // socket option with SO_REUSEADDR
@@ -215,19 +221,12 @@ void n_routine()
   int choice = 0;
   char line_buffer[16];
 
-
   //settin max_fd as list_fd and monitoring that on fd_open table
   fd_open = (int *)calloc(FD_SETSIZE, sizeof(int));
 
   fd_open[fifo_fd] = 1;
-  printf("Fifo_Fd %d", fifo_fd);
   fd_open[list_fd] = 1;
-  printf("List_Fd %d", list_fd);
-
-  printf("Prima Max_Fd %d\n", max_fd);
   max_fd = (fifo_fd > list_fd) ? fifo_fd : list_fd;
-  printf("Dopo Max_Fd %d\n", max_fd);
-  fd_open[max_fd] = 1;
   // setting list_fd as max since fifo_fd is created before
 
   while (1)
@@ -267,13 +266,13 @@ void n_routine()
     /***********************
         FIFO comunication
     ************************/
-    if(FD_ISSET(fifo_fd, &fdset))
-    {
-      n_ready--;
-      printf("received transaction from %s\n", FIFOPATH);
-      pthread_create(&tid[tid_index], NULL, fifo_handler, NULL);
-      tid_index++;
-    }
+    // if(FD_ISSET(fifo_fd, &fdset))
+    // {
+    //   n_ready--;
+    //   printf("received transaction from %s\n", FIFOPATH);
+    //
+    //   tid_index++;
+    // }
 
 
     /***************************
