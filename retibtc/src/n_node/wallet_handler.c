@@ -21,6 +21,17 @@ static void* wallet_connection(void *arg)
   pthread_exit(NULL);
 }
 
+static void* receive_transaction(void *arg)
+{
+  int fd = *(int*)arg;
+  struct transaction trns;
+  printf("Wallet_handler [%d] receiving transaction...\n", getpid());
+  // receiv transaction from w_node and write down to node_handler
+  Read(fd, &trns, sizeof(trns));
+  Write(fifo_fd, &trns, sizeof(trns));
+  sendInt(fd, 1);
+  pthread_exit(NULL);
+}
 
 void w_routine()
 {
@@ -30,6 +41,9 @@ void w_routine()
   list_fd = Socket(AF_INET, SOCK_STREAM, 0);
   setsockopt(list_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(int));
   //binding address on list_fd and setting queue
+
+  mkfifo(FIFOPATH, 0664); // u+rw, g+rw, o+r
+  fifo_fd = open(FIFOPATH, O_WRONLY);
 
   struct sockaddr_in my_server_addr;
   fillAddressIPv4(&my_server_addr, NULL, wallet_port);
@@ -131,17 +145,15 @@ void w_routine()
           continue;
         }
 
-        tid_args[tid_index%BACKLOG] = i_fd;
-
+        tid_args[tid_index] = i_fd;
         switch(request)
         {
           case WALLET_CONNECTION:
-            pthread_create(&tid[tid_index%BACKLOG], NULL, wallet_connection, (void *)&tid_args[tid_index%BACKLOG]);
+            pthread_create(&tid[tid_index], NULL, wallet_connection, (void *)&tid_args[tid_index]);
             break;
-          /*case RECV_TRNS:
-            receive_transaction();
+          case TRANSACTION:
+            pthread_create(&tid[tid_index], NULL, receive_transaction, (void *)&tid_args[tid_index]);
             break;
-          */
           default:
             fprintf(stderr, "Wallet[%d]: request received is not correct\n", getpid());
             break;
