@@ -39,7 +39,7 @@ Conn_node getConnectedNode(int fd, Conn_node node)
 void visitConnectedNode(void *args)
 {
   Conn_node n = (Conn_node)args;
-  printf("Node = %s:%hu\n", n->address, n->port);
+  printf("Node = %s:%hu in fd [%d]\n", n->address, n->port, n->fd);
 }
 
 
@@ -57,9 +57,8 @@ bool compare_by_addr(void *x, void *y)
 
 bool compare_by_fd(void *x, void *y)
 {
-  Conn_node a = (Conn_node) x;
-  Conn_node b = (Conn_node) y;
-  if(a->fd == b->fd)
+  int a = *(int*)x, b = *(int*)y;
+  if(a == b)
       return true;
   return false;
 }
