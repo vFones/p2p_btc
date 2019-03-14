@@ -18,7 +18,7 @@ set(RETIBTC ${CMAKE_SOURCE_DIR}/retibtc)
 
 #set libraries folder
 link_directories(${RETIBTC}/lib)
-set(LIBRARY_OUTPUT_PATH ${RETIBTC}/lib/static)
+set(LIBRARY_OUTPUT_PATH ${RETIBTC}/lib/shared)
 
 #set use of system style include (e.g. #include <libs.h>)
 include_directories(SYSTEM ${RETIBTC}/include)
@@ -43,7 +43,7 @@ endif()
 
 #add all files in lib/ as libraries
 AUX_SOURCE_DIRECTORY(${RETIBTC}/lib LIBS_FILES)
-add_library(libraries ${LIBS_FILES})
+add_library(libraries SHARED ${LIBS_FILES})
 
 #link libraries to executable
 set(N_NODE_LIBS ${RETIBTC}/src/n_node/node_handler.c ${RETIBTC}/src/n_node/wallet_handler.c)
