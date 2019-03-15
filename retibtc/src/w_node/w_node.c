@@ -1,101 +1,84 @@
 #include "w_node.h"
 
-// static void send_coin()
-// {
-//   if(wallet_amount == 0)
-//   {
-//     printf("\nyour balance is 0. In order to make a transaction you must first buy ViTCoins!!\n");
-//     return;
-//   }
-//   char buffer[32], c = 'n';
-//   float vtc2send = 0.0;
-//   struct s_net_ent dst;
-//   Trns trns = (Trns) obj_malloc(TRNS);
-//   short confirm = 0;
-//
-//   while (c != 'y')
-//   {
-//     printf("\nInsert a valid IPv4 address: ");
-//     fflush(stdin);
-//     scanf(" %s", buffer);
-//     strncpy(dst.addr, buffer, LEN_ADDRESS);
-//
-//     printf("Insert a valid port address: ");
-//     fflush(stdin);
-//     scanf(" %hud", &dst.port);
-//
-//     printf("Insert a valid amount to send: ");
-//
-//     fflush(stdin);
-//     scanf(" %s", buffer);
-//     vtc2send = strtof(buffer, NULL);
-//
-//     if(vtc2send > wallet_amount)
-//       fprintf(stderr, "Sending more money than your actual fund...\nRETRY\n");
-//     else
-//     {
-//       printf("are those info correct? [y]\n");
-//       fflush(stdin);
-//       scanf(" %c",&c);
-//     }
-//   }
-//   wallet_amount = wallet_amount - vtc2send;
-//
-//   printf("Are you sure want to make this payment? [y]\n");
-//   fflush(stdin);
-//   scanf(" %c",&c);
-//
-//   if(c == 'y')
-//   {
-//     char *timestamp = gen_time_stamp();
-//     trns = create_transaction(timestamp, vtc2send, myent, dst);
-//
-//     send_short(peerfd, W_TRANSACTION);
-//
-//     send_trns(peerfd, trns);
-//
-//     printf("Waiting confirm from peer...\n");
-//
-//     recv_short(peerfd, &confirm);
-//
-//     if(!confirm)
-//       fprintf(stderr, "Transaction not validate, aborting operation\n");
-//   }
-//
-//   printf("\nNew balance now is:\n");
-//   request_amount();
-//   printf("\nReturning to main menu\n");
-//   free(trns);
-// }
 
 //make a fake transaction, sending src and dst eguals to me.
-void add_coin()
+static void create_transaction(int choice)
 {
-  float vtc2buy = 0.0;
-  char buffer[32];
+  float cryptocurrecy = 0.0;
+  char buffer[32], c = 'n';
   int confirm = 0;
-
-  printf("How many ViTCoin do you want to \'mine\'?\n");
-  fflush(stdin);
-  scanf(" %s", buffer);
-  vtc2buy = strtof(buffer, NULL);
-
-  // char *timestamp = gen_time_stamp();
-  //Trns trns = create_transaction(timestamp, vtc2buy, myent, myent);
   struct transaction trns;
-  strncpy(trns.src, wallet_info.address, LEN_ADDRESS);
-  trns.srcport = wallet_info.port;
-  trns.amount = vtc2buy;
-  sendInt(node_info.fd, TRANSACTION);
 
-  Write(node_info.fd, &trns, sizeof(trns));
+  switch(choice)
+  {
+    case 1:
+      if(wallet_amount == 0)
+      {
+        printf("\nyour balance is 0. In order to make a transaction you must first have cryptocurrecy\n");
+        break;
+      }
+      struct confirm_new_node new_conn = choose_node();
+      if(new_conn.confirm == 'y')
+      {
+        printf("Insert a valid amount to send: \n");
+        fflush(stdin);
+        scanf(" %s", buffer);
+        cryptocurrecy = strtof(buffer, NULL);
+
+        if(cryptocurrecy > wallet_amount)
+          fprintf(stderr, "Sending more money than your actual fund...\nRETRY\n");
+        else
+        {
+          printf("Are you sure want to make this payment? [y]\n");
+          fflush(stdin);
+          scanf(" %c", &c);
+
+          if(c == 'y')
+          {
+            trns = fillTransaction(wallet_info, wallet_info, cryptocurrecy);
+
+            sendInt(node_info.fd, TRANSACTION);
+            sendTrns(node_info.fd, trns);
+            printf("\nwait confirm from peer\n");
+            recvInt(node_info.fd, &confirm);
+
+            if(!confirm)
+              fprintf(stderr, "Transaction not validate\n");
+            else
+              wallet_amount -= cryptocurrecy;
+          }
+          //else returning to main menu;
+        }
+      }
+      printf("\nReturning to main menu\n");
+      break;
+
+    case 2:
+      printf("How many cryptocurrecy do you want to \'mine\'?\n");
+      fflush(stdin);
+      scanf(" %s", buffer);
+      cryptocurrecy = strtof(buffer, NULL);
 
 
-  printf("\nwait confirm from peer\n");
-  recvInt(node_info.fd, &confirm);
+      trns = fillTransaction(wallet_info, wallet_info, cryptocurrecy );
 
-  if(!confirm)
-    fprintf(stderr, "Transaction not validate, aborting operation\n");
+      sendInt(node_info.fd, TRANSACTION);
+      sendTrns(node_info.fd, trns);
+
+      printf("\nwait confirm from peer\n");
+      recvInt(node_info.fd, &confirm);
+
+      if(!confirm)
+        fprintf(stderr, "Transaction not validate, aborting operation\n");
+      else
+        wallet_amount += cryptocurrecy;
+
+      break;
+
+    default:
+      //never reached
+      break;
+  }
 
 
 }
@@ -109,10 +92,10 @@ static void menu_case(int choice)
       //request_amount();
       break;
     case 2:
-      //send_coin();
+      create_transaction(1);
       break;
     case 3:
-      add_coin();
+      create_transaction(2);
       break;
     case 5:
       printf("Cleaning and exiting\n");
@@ -124,17 +107,19 @@ static void menu_case(int choice)
   }
 }
 
+
 static void print_menu()
 {
   //system("clear");
   printf("\n\nWallet address: %s:[%hu]\nWallet balance: %5.2f \n \
-    1) Request amount of ViTC.\n \
+    1) Request amount of cryptocurrecy.\n \
     2) Make an exchange\n \
-    3) Buy more ViCoin\n \
+    3) Buy more cryptocurrecy\n \
     5) Exit...\n \
     (press ENTER to activate)\n",\
     wallet_info.address, wallet_info.port, wallet_amount);
 }
+
 
 void wallet_routine()
 {
