@@ -83,3 +83,29 @@ bool compare_by_fd(void *x, void *y)
       return true;
   return false;
 }
+
+struct confirm_new_node choose_node()
+{
+  //char buffer[256];
+  char buffer[BUFFLEN];
+  struct confirm_new_node new_node;
+
+  new_node.node = (Conn_node)Malloc(SIZE_NODE);
+
+  printf("\nInsert a valid IPv4 address: ");
+  scanf(" %s", buffer);
+  strncpy(new_node.node->address, buffer, 32);
+
+  printf("Insert a valid port address: ");
+  scanf(" %hd", &new_node.node->port);
+
+  printf("Are those info correct? Press [y] to retry, any other char to skip node\n");
+  scanf(" %c", &new_node.confirm);
+  if(new_node.confirm == 'y')
+    return new_node;
+  else
+  {
+    printf("Info not correct\n");
+    return new_node;
+  }
+}

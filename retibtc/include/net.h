@@ -22,6 +22,11 @@ struct connected_node{
 #define SIZE_NODE sizeof(struct connected_node)
 typedef struct connected_node* Conn_node;
 
+struct confirm_new_node{
+  Conn_node node;
+  char confirm;
+};
+
 void fillAddressIPv4(struct sockaddr_in *socket_address, char *ip_address, \
   unsigned short port);
 
@@ -33,5 +38,7 @@ bool compare_connected_node(void *x, void *y);
 
 bool compare_by_addr(void *x, void *y);
 bool compare_by_fd(void *x, void *y);
+
+struct confirm_new_node choose_node();
 
 #endif
