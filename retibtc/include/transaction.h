@@ -10,14 +10,20 @@ enum node_macro{
 };
 
 struct transaction{
-  char src[LEN_ADDRESS];
-  short srcport;
-  char dst[LEN_ADDRESS];
-  short dstport;
+  struct connected_node src;
+  struct connected_node dst;
   float amount;
   int random;
 };
 #define TRNS_SIZE sizeof(struct transaction);
+
+struct transaction fillTransaction(
+  struct connected_node src, \
+  struct connected_node dst, \
+  float amount );
+
+int sendTrns(int fd, struct transaction trns);
+int recvTrns(int fd, struct transaction trns);
 
 
 #endif
