@@ -14,12 +14,15 @@ Tree new_node(Tree parent, Tree prev_sibl, void *info)
     new_tree->parent = NULL;
     new_tree->depth = 0;
   }
+
   if(prev_sibl != NULL)
     new_tree->prev_sibl = prev_sibl;
   else
     new_tree->prev_sibl = NULL;
+
   new_tree->siblings = NULL;
   new_tree->kids = NULL;
+
   if(info == NULL)
     new_tree->info = NULL;
   else

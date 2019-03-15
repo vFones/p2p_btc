@@ -2,36 +2,6 @@
 
 static pthread_mutex_t mtx_tree;
 
-struct confirm_new_node{
-  Conn_node node;
-  char confirm;
-};
-
-static struct confirm_new_node choose_node()
-{
-  //char buffer[256];
-  char buffer[BUFFLEN];
-  struct confirm_new_node new_node;
-
-  new_node.node = (Conn_node)Malloc(SIZE_NODE);
-
-  printf("\nInsert a valid IPv4 address: ");
-  scanf(" %s", buffer);
-  strncpy(new_node.node->address, buffer, 32);
-
-  printf("Insert a valid port address: ");
-  scanf(" %hd", &new_node.node->port);
-
-  printf("Are those info correct? Press [y] to retry, any other char to skip node\n");
-  scanf(" %c", &new_node.confirm);
-  if(new_node.confirm == 'y')
-    return new_node;
-  else
-  {
-    printf("Info not correct\n");
-    return new_node;
-  }
-}
 
 static void* fifo_handler()
 {
@@ -40,7 +10,7 @@ static void* fifo_handler()
     struct transaction trns;
     printf("handling fifos\n");
     Read(fifo_fd, &trns, sizeof(trns));
-    printf("package from %s:%hu\n", trns.src, trns.srcport);
+    printf("package from %s:%hu\n", trns.src.address, trns.src.port);
     // TODO:
     pthread_exit(NULL);
   }
