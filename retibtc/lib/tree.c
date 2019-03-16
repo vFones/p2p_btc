@@ -147,6 +147,7 @@ bool has_node_prev_sibl(Tree t)
   return false;
 }
 
+
 Tree remove_from_tree(Tree t, void *arg, COMPARE_TREE_INFO)
 {
   if(t == NULL || arg == NULL)

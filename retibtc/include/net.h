@@ -27,8 +27,7 @@ struct confirm_new_node{
   char confirm;
 };
 
-void fillAddressIPv4(struct sockaddr_in *socket_address, char *ip_address, \
-  unsigned short port);
+void fillAddressIPv4(struct sockaddr_in *socket_address, char *ip_address, short port);
 
 Conn_node getsockNode(int fd);
 Conn_node getpeerNode(int fd);

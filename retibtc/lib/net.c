@@ -1,7 +1,7 @@
 #include "../include/net.h"
 
 
-void fillAddressIPv4(struct sockaddr_in *socket_address, char *ip_address, unsigned short port)
+void fillAddressIPv4(struct sockaddr_in *socket_address, char *ip_address, short port)
 {
   memset((void *) socket_address, 0, sizeof(*socket_address));
   socket_address->sin_family = AF_INET;

@@ -29,7 +29,7 @@ int main(int argc, char **argv)
   // pthread_mutexattr_init(&mtx_fd_attr);
   // pthread_mutexattr_setpshared(&mtx_fd_attr, PTHREAD_PROCESS_SHARED);
   // pthread_mutex_init(&mtx_fd, &mtx_fd_attr);
-  
+
   mkfifo(FIFOPATH, 0664); // u+rw, g+rw, o+r
 
   //initialized just to silent warning..
@@ -58,15 +58,14 @@ int main(int argc, char **argv)
   if (node_server == 0)
     n_routine();
 
-
-  // TODO: process used to serve wallet
   if(wallet_server == 0)
     w_routine();
 
   //main process
-  if(node_server) // && wallet_server)
+  if(node_server && wallet_server)
   {
     wait(&node_server);
+    wait(&wallet_server);
     fprintf(stderr, "[%d] forked into [%d] and [%d]\n", getpid(), node_server, wallet_server);
 
     // pthread_mutex_destroy(&mtx_fd);

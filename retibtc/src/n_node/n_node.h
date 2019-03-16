@@ -11,6 +11,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <math.h> // ceill
 #include <sys/stat.h> // mkfifo
 #include <fcntl.h> // open
 
@@ -29,6 +30,7 @@ short wallet_port;
 struct sockaddr_in *node_info;
 Tree connected_node;
 Tree connected_wallet;
+
 
 int fifo_fd;
 int max_fd;
