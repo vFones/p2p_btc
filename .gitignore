@@ -57,9 +57,11 @@ CMakeFiles
 cmake_install.cmake
 retibtc/bin/
 Makefile
+build
 
 # CLion folder
 .idea/
+cmake-build-debug
 
 # Mac OSX
 .DS_Store
