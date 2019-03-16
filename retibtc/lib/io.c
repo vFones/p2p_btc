@@ -99,3 +99,23 @@ int recvChar(int fd, char *n)
   }
   return 0;
 }
+
+int sendBlock(int fd, Block b)
+{
+  if(Write(fd, &b, BLOCK_SIZE) != 0)
+  {
+    perror("sendBlock");
+    return -1;
+  }
+  return 0;
+}
+
+int recvBlock(int fd, Block b)
+{
+  if(Read(fd, b, BLOCK_SIZE) != 0)
+  {
+    perror("sendBlock");
+    return -1;
+  }
+  return 0;
+}

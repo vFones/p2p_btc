@@ -1,25 +1,16 @@
 #include "n_node.h"
+#include "../../include/blockchain.h"
+
+Blockchain blockchain;
 
 static pthread_mutex_t mtx_tree;
 
-
-static void* fifo_handler()
-{
-  while(1)
-  {
-    struct transaction trns;
-    printf("handling fifos\n");
-    Read(fifo_fd, &trns, sizeof(trns));
-    printf("package from %s:%hu\n", trns.src.address, trns.src.port);
-    // TODO:
-    pthread_exit(NULL);
-  }
-}
-
-
+/***********************
+  STDIN MENU FUNCTIONS
+************************/
 static void connect_to_network()
 {
-  int node_n = 0, response = 0, i = 0;
+  int node_n = 0, i = 0;
   struct confirm_new_node new_conn;
 
   printf("\nHow many node do you want to connect to?: ");
@@ -38,70 +29,94 @@ static void connect_to_network()
 
     if(new_conn.confirm == 'y')
     {
+      int bsize_new_conn = 0;
       int fd = Socket(AF_INET, SOCK_STREAM, 0);
       struct sockaddr_in tmp;
-      //socklen_t len = sizeof(struct sockaddr*);
-      fillAddressIPv4(&tmp, new_conn.node->address, new_conn.node->port);
+
+      fillAddressIPv4(&tmp, new_conn.node->address ,new_conn.node->port);
       visitConnectedNode(new_conn.node);
 
       if (connect(fd, (struct sockaddr *)&tmp, sizeof(struct sockaddr)) != -1)
       {
         sendInt(fd, NODE_CONNECTION);
 
-        recvInt(fd, &response);
-        //if response is positive add to my list.
-        if(response)
+        // waiting confirming in response
+        recvInt(fd, &bsize_new_conn);
+
+        /*************************
+         **   SYNC BLOCKCHAIN   **
+         ************************/
+        //if response is positive add to my list and sync blockchain
+        if(bsize_new_conn)
         {
-          new_conn.node->fd = fd;
-          pthread_mutex_lock(&mtx_tree);
-            create_kid_to_node(connected_node, new_conn.node);
-          pthread_mutex_unlock(&mtx_tree);
-          succ_connection++;
+          int diff = bsize_new_conn - blockchain->b_size;
+
+          // if him got more block than me, send to me
+          if(bsize_new_conn >= blockchain->b_size)
+          {
+            //receiving last block just in case size is the same because multi-head
+            sendInt(fd, diff);
+
+            while(diff != 0)
+            {
+              struct block b;
+              recvBlock(fd, &b);
+              addBlockToBlockchain(blockchain, b);
+              diff--;
+            }
+          }
+          else //i've got more block than him, sending to him
+          {
+            sendInt(fd, diff);
+            diff = abs(diff);
+            int level = (blockchain->b_size - diff);
+            // ( blockchain_size - diff  = livello da cui partire a mandare )
+            // e.g.: blockchain_size = 15, size = 3, level to search in tree is 12
+            while(level < blockchain->b_size)
+            {
+              //search by level in tree
+              struct block b = searchByLevel(blockchain, level);
+              sendBlock(fd, &b);
+              //struct blockchain block = search_in_tree(blockchain, level)
+              //send block
+              level++;
+            }
+          }
+
+
+          /*************************
+           * downloaded blockchain *
+           **  adding to my list  **
+           ************************/
         }
+        //response negative
         else
-          printf("Node didn't accept, skip and go on\n");
+          printf("Node got 0 block\n");
+
+        fd_open[fd] = 1;
+        if(fd > max_fd)
+          max_fd = fd;
+
+        new_conn.node->fd = fd;
+
+        pthread_mutex_lock(&mtx_tree);
+        create_kid_to_node(connected_node, new_conn.node);
+        pthread_mutex_unlock(&mtx_tree);
+
+        succ_connection++;
       }
+      //failed connect
       else
-        perror("connect in node_handler:");
+        perror("connect_to_network");
     }
+    //confirm fin, new iteration
     i++;
   }
 
   printf("Connected to %d node\n", succ_connection);
 
-  pthread_mutex_lock(&mtx_tree);
-    visit_tree(connected_node, visitConnectedNode);
-  pthread_mutex_unlock(&mtx_tree);
-
-  fd_open[new_conn.node->fd] = 1;
-  if(new_conn.node->fd > max_fd)
-    max_fd = new_conn.node->fd;
-
-  return;
 }
 
-static void* node_connection(void* arg)
-{
-  // adding node to my custom list after confirming
-  int fd = *(int*)arg;
-  Conn_node n = (Conn_node)malloc(SIZE_NODE);
-
-  n = getpeerNode(fd);
-
-  sendInt(n->fd, 1);
-
-  pthread_mutex_lock(&mtx_tree);
-    create_kid_to_node(connected_node, n);
-  pthread_mutex_unlock(&mtx_tree);
-
-  fd_open[n->fd] = 1;
-  if(n->fd > max_fd)
-    max_fd = n->fd;
-
-  //TODO: download blockchain
-  fprintf(stderr,"node_connection: pthread exit\n");
-  pthread_exit(NULL);
-}
 
 static void close_connection()
 {
@@ -125,6 +140,7 @@ static void close_connection()
   free(node.node);
 }
 
+
 static void menu_case(int choice)
 {
   switch(choice)
@@ -140,7 +156,6 @@ static void menu_case(int choice)
     case 5:
       printf("Cleaning and exiting\n");
       exit(EXIT_SUCCESS);
-    break;
 
     default:
       fprintf(stderr, "Choice is not processed, retry\n");
@@ -149,6 +164,80 @@ static void menu_case(int choice)
   return;
 }
 
+/**********************
+    THREAD FUNCTIONS
+***********************/
+static void* node_connection(void* arg)
+{
+  // adding node to my custom list after confirming
+  int fd = *(int*)arg;
+  Conn_node n = NULL;
+
+  int bsize_n = 0;
+
+  n = getpeerNode(fd);
+
+  //sending confirm
+  sendInt(n->fd, blockchain->b_size);
+
+  //if my blockchain size is 0 don't sync
+  if(blockchain->b_size)
+  {
+    recvInt(n->fd, &bsize_n);
+
+    if (bsize_n >= 0) {
+      int level = (blockchain->b_size - bsize_n);
+      // ( blockchain_size - bsize_n  = livello da cui partire a mandare )
+      // e.g.: blockchain_size = 15, bsize_n = 3, level to search in tree is 12
+      while (level < blockchain->b_size) {
+        //search by level in tree
+        struct block b = searchByLevel(blockchain, level);
+        sendBlock(fd, &b);
+        //struct blockchain block = search_in_tree(blockchain, level)
+        //send block
+        level++;
+      }
+    } else //received negative number
+    {
+      int diff = abs(bsize_n);
+      while (diff != 0) {
+        struct block b;
+        recvBlock(n->fd, &b);
+        addBlockToBlockchain(blockchain, b);
+        diff--;
+      }
+      //send last block since his got same size as me
+    }
+  }
+
+  pthread_mutex_lock(&mtx_tree);
+    create_kid_to_node(connected_node, n);
+  pthread_mutex_unlock(&mtx_tree);
+
+  fd_open[n->fd] = 1;
+  if(n->fd > max_fd)
+    max_fd = n->fd;
+
+  fprintf(stderr,"node_connection: pthread exit\n");
+  pthread_exit(NULL);
+}
+
+static void* fifo_handler()
+{
+  while(1)
+  {
+    struct transaction trns;
+    printf("handling fifos\n");
+    Read(fifo_fd, &trns, sizeof(trns));
+    printf("package from %s:%hu\n", trns.src.address, trns.src.port);
+    // TODO:
+    pthread_exit(NULL);
+  }
+}
+
+/******************
+   N_NODE ROUTINE
+******************/
 void n_routine()
 {
   fprintf(stderr, "I'm [%d] forked from [%d]\n", getpid(), getppid());
@@ -168,11 +257,15 @@ void n_routine()
   // socket option with SO_REUSEADDR
   setsockopt(list_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(int));
 
+  fillAddressIPv4(&my_server_addr, NULL, node_port);
+
   // bindin address:port to socket fd and setting a backlog
-  Bind(list_fd, (struct sockaddr*)&my_server_addr);
+  Bind(list_fd, (struct sockaddr *)&my_server_addr);
   Listen(list_fd, BACKLOG);
 
   connected_node = new_node(NULL, NULL, NULL);
+
+  blockchain = create_blockchain();
 
   // used for select management and monitor
   int i_fd = 0, n_ready = 0;
@@ -277,7 +370,7 @@ void n_routine()
       continue;
 
       // if socket wakeup
-      if (FD_ISSET(i_fd, &fdset))
+      if(FD_ISSET(i_fd, &fdset))
       {
         n_ready--;
         response = recvInt(i_fd, &request);
@@ -311,12 +404,9 @@ void n_routine()
             pthread_create(&tid[tid_index], NULL, node_connection, (void *)&tid_args[tid_index]);
             break;
           /*
-          case WALLET_CONNECTION:
-          wallet_connection();
-          break;
           case RECV_TRNS:
-          receive_transaction();
-          break;
+            receive_transaction();
+            break;
           */
           default:
             fprintf(stderr, "Wallet[%d]: request received is not correct\n", getpid());
