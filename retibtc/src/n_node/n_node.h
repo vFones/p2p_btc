@@ -11,7 +11,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/wait.h>
-#include <math.h> // ceill
+#include <time.h>
 #include <sys/stat.h> // mkfifo
 #include <fcntl.h> // open
 

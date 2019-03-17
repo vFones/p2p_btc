@@ -38,11 +38,10 @@ int main(int argc, char **argv)
   wallet_amount = 0.0;
 
   fillAddressIPv4(&node_address, node_info.address, node_info.port);
-  printf("\nAuthenticated, receiving peer 2 connect...\n\n");
 
   node_info.fd = Socket(AF_INET, SOCK_STREAM, 0);
   Connect(node_info.fd, (struct sockaddr *)&node_address);
-  wallet_info = *getsockNode(node_info.fd);
+  wallet_info = getsockNode(node_info.fd);
 
   sendInt(node_info.fd, WALLET_CONNECTION);
 

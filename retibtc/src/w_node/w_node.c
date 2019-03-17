@@ -35,7 +35,7 @@ static void create_transaction(int choice)
 
           if(c == 'y')
           {
-            trns = fillTransaction(wallet_info, wallet_info, cryptocurrecy);
+            trns = fillTransaction(wallet_info, *(new_conn.node), cryptocurrecy);
 
             sendInt(node_info.fd, TRANSACTION);
             sendTrns(node_info.fd, trns);
@@ -58,7 +58,6 @@ static void create_transaction(int choice)
       fflush(stdin);
       scanf(" %s", buffer);
       cryptocurrecy = strtof(buffer, NULL);
-
 
       trns = fillTransaction(wallet_info, wallet_info, cryptocurrecy );
 

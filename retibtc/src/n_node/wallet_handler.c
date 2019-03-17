@@ -25,11 +25,17 @@ static void* receive_transaction(void *arg)
 {
   int fd = *(int*)arg;
   struct transaction trns;
-  printf("Wallet_handler [%d] receiving transaction...\n", (int)pthread_self());
+  int response = 0;
+  printf("Wallet_handler [%d]: receiving transaction...\n", (int)pthread_self());
   // receiv transaction from w_node and write down to node_handler
   Read(fd, &trns, sizeof(trns));
   Write(fifo_fd, &trns, sizeof(trns));
-  sendInt(fd, 1);
+
+  recvInt(fifo_fd, &response);
+  printf("received from fifo confirm\n");
+
+  sendInt(fd, response);
+
   pthread_exit(NULL);
 }
 
@@ -79,6 +85,8 @@ void w_routine()
     for (i_fd = 0; i_fd <= max_fd; i_fd++)
       if (fd_open[i_fd])
         FD_SET(i_fd, &fdset);
+
+    visit_tree(connected_wallet, visitConnectedWallet);
 
     while ( (n_ready = select(max_fd + 1, &fdset, NULL, NULL, NULL)) < 0 );
     if (n_ready < 0 )
