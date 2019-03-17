@@ -39,6 +39,12 @@ static void* receive_transaction(void *arg)
   pthread_exit(NULL);
 }
 
+void sig_handler(int sign_no)
+{
+  if(sign_no == SIGINT)
+    exit_flag = 1;
+}
+
 void w_routine()
 {
   printf("I'm [%d] forked from [%d]\n", getpid(), getppid());
