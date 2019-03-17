@@ -283,29 +283,46 @@ static void* fifo_handler()
   return NULL;
 }
 
+void sig_handler(int sign_no)
+{
+  if(sign_no == SIGINT)
+    exit_flag = 1;
+}
+
 /******************
    N_NODE ROUTINE
 ******************/
 void n_routine()
 {
-  fprintf(stderr, "I'm [%d] forked from [%d]\n", getpid(), getppid());
-  int optval = 1;
+  printf("I'm [%d] forked from [%d]\n", getpid(), getppid());
+  srand(time(NULL));
+
+  /* installazione degli handler dei segnali */
+  struct sigaction act;
+  sigset_t new_mask, old_mask;
+  act.sa_handler = sig_handler;
+  sigemptyset(&act.sa_mask);
+  sigaction(SIGINT, &act, NULL);
+  sigaddset(&new_mask, SIGINT);
+  sigprocmask(SIG_SETMASK, NULL, &old_mask);
+
+  int opt_value = 1;
   int list_fd = 0; // main FDs to monitor
-  struct sockaddr_in my_server_addr;
-  pthread_t fifotid;
+
   //mutex dinamically allcoated
   pthread_mutex_init(&mtx_tree, NULL);
-  srand(time(NULL));
+
 
   // opening fifo and handling with a thread.
   fifo_fd = open(FIFOPATH, O_RDWR);
+  pthread_t fifotid;
   pthread_create(&fifotid, NULL, fifo_handler, NULL);
 
   list_fd = Socket(AF_INET, SOCK_STREAM, 0);
-
   // socket option with SO_REUSEADDR
-  setsockopt(list_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(int));
+  setsockopt(list_fd, SOL_SOCKET, SO_REUSEADDR, &opt_value, sizeof(int));
 
+  struct sockaddr_in my_server_addr;
   fillAddressIPv4(&my_server_addr, NULL, node_port);
 
   // bindin address:port to socket fd and setting a backlog
@@ -313,7 +330,6 @@ void n_routine()
   Listen(list_fd, BACKLOG);
 
   connected_node = new_node(NULL, NULL, NULL);
-
   blockchain = create_blockchain();
 
   // used for select management and monitor
@@ -343,25 +359,42 @@ void n_routine()
 
   while (1)
   {
+    // critic section used to control flag
+    sigprocmask(SIG_BLOCK, &new_mask, NULL);
+
+    if(exit_flag == 1)
+      break;
+
     FD_ZERO(&fdset);
     FD_SET(STDIN_FILENO, &fdset);
     //FD_SET(fifo_fd, &fdset);
     FD_SET(list_fd, &fdset);
     //re update fdset with fd_open monitor table
     for (i_fd = 0; i_fd <= max_fd; i_fd++)
-      if (fd_open[i_fd])
+      if(fd_open[i_fd])
         FD_SET(i_fd, &fdset);
 
     printf("\tChoose:\n1) connect to peers;\n2) disconnect from peer\n5) quit\n");
     printf("Connected node:\n");
     visit_tree(connected_node, visitConnectedNode);
 
-    while ( (n_ready = select(max_fd + 1, &fdset, NULL, NULL, NULL)) < 0 );
-    if (n_ready < 0 )
+    while ((n_ready = pselect(max_fd + 1, &fdset, NULL, NULL, NULL, &old_mask)) < 0); //reset
+
+    if(n_ready < 0 && errno == EINTR)
+    {
+      sigprocmask(SIG_UNBLOCK, &new_mask, NULL); // unlock if signal's != SIGINT
+      continue;
+    }
+
+    if(n_ready < 0)
     {
       perror("select error");
       exit(1);
     }
+
+    sigprocmask(SIG_UNBLOCK, &new_mask, NULL);
+    // exit critic section unlocking signal
+
 
     /*********************
         STDIN menu_case
@@ -375,26 +408,15 @@ void n_routine()
       menu_case(choice);
     }
 
-    /***********************
-        FIFO comunication
-    ************************/
-    // if(FD_ISSET(fifo_fd, &fdset))
-    // {
-    //   n_ready--;
-    //   printf("received transaction from %s\n", FIFOPATH);
-    //
-    //   tid_index++;
-    // }
-
 
     /***************************
         Socket connections
     ***************************/
-    if (FD_ISSET(list_fd, &fdset))
+    if(FD_ISSET(list_fd, &fdset))
     {
       n_ready--; //accepting after new connection
       int keepalive = 1;
-      if ((accept_fd = accept(list_fd, NULL, NULL)) < 0)
+      if((accept_fd = accept(list_fd, NULL, NULL)) < 0)
       {
         perror("accept");
         exit(1);
@@ -405,7 +427,7 @@ void n_routine()
       fd_open[accept_fd] = 1;
 
       //calculating new max
-      if (max_fd < accept_fd)
+      if(max_fd < accept_fd)
         max_fd = accept_fd;
     }
     i_fd = list_fd;
@@ -415,48 +437,52 @@ void n_routine()
     {
       // selecting i_fd to serve
       i_fd++;
-      if (!fd_open[i_fd])
-      continue;
+      if(!fd_open[i_fd])
+        continue;
 
       // if socket wakeup
       if(FD_ISSET(i_fd, &fdset))
       {
         n_ready--;
         response = recvInt(i_fd, &request);
-        if (response != 0)
+
+        /************************************
+         * if closed because EOF while Read;
+         ************************************/
+        if(response != 0)
         {
-          fprintf(stderr,"Closed connection\n");
+          fprintf(stderr, "Closed connection\n");
           //closing and choosing new max fd to monitor
           fd_open[i_fd] = 0;
           close(i_fd);
-          Tree found = remove_from_tree(connected_node, (void*)&i_fd, compare_by_fd);
+          Tree found = remove_from_tree(connected_node, (void *) &i_fd, compare_by_fd);
           if(found != NULL)
             free(found);
           // TODO: removing from list if crashed
 
           //updating max fd with the last open in fd_open
-          if (max_fd == i_fd)
+          if(max_fd == i_fd)
           {
-            while (fd_open[--i_fd] == 0)
-              ;
+            while (fd_open[--i_fd] == 0);
             max_fd = i_fd;
             break;
           }
           continue;
         }
+        /*****************/
 
         tid_args[tid_index] = i_fd;
         //request received correctly, switching between cases
-        switch(request)
+        switch (request)
         {
           case NODE_CONNECTION:
-            pthread_create(&tid[tid_index], NULL, node_connection, (void *)&tid_args[tid_index]);
+            pthread_create(&tid[tid_index], NULL, node_connection, (void *) &tid_args[tid_index]);
             break;
-          /*
-          case RECV_TRNS:
-            receive_transaction();
-            break;
-          */
+            /*
+            case RECV_TRNS:
+              receive_transaction();
+              break;
+            */
           default:
             fprintf(stderr, "Wallet[%d]: request received is not correct\n", getpid());
             //print_menu();
@@ -465,8 +491,16 @@ void n_routine()
         tid_index++;
       }
     }
-    //TODO: move to handler
-    for(int j=0; j < tid_index;  j++)
-      pthread_join(tid[j], NULL);
   }
+
+  //destroy from here free(blockchain->genesis);
+  //free(connected_node);
+
+
+  for(int j=0; j < tid_index;  j++)
+    pthread_join(tid[j], NULL);
+
+  pthread_mutex_destroy(&mtx_tree);
+
+  exit(EXIT_SUCCESS);
 }

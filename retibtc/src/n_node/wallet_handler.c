@@ -41,23 +41,35 @@ static void* receive_transaction(void *arg)
 
 void w_routine()
 {
-  fprintf(stderr, "I'm [%d] forked from [%d]\n", getpid(), getppid());
-  int optval = 1;
-  int list_fd = 0;
-  list_fd = Socket(AF_INET, SOCK_STREAM, 0);
-  setsockopt(list_fd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(int));
-  //binding address on list_fd and setting queue
+  printf("I'm [%d] forked from [%d]\n", getpid(), getppid());
 
+  int opt_value = 1;
+  int list_fd = 0;
+
+  pthread_mutex_init(&mtx_tree, NULL);
+
+  list_fd = Socket(AF_INET, SOCK_STREAM, 0);
+  setsockopt(list_fd, SOL_SOCKET, SO_REUSEADDR, &opt_value, sizeof(int));
+
+  /* installazione degli handler dei segnali */
+  struct sigaction act;
+  sigset_t new_mask, old_mask;
+  act.sa_handler = sig_handler;
+  sigemptyset(&act.sa_mask);
+  sigaction(SIGINT, &act, NULL);
+  sigaddset(&new_mask, SIGINT);
+  sigprocmask(SIG_SETMASK, NULL, &old_mask);
+
+  //opening fifo
   fifo_fd = open(FIFOPATH, O_RDWR);
 
   struct sockaddr_in my_server_addr;
   fillAddressIPv4(&my_server_addr, NULL, wallet_port);
-  pthread_mutex_init(&mtx_tree, NULL);
 
+  //binding address on list_fd and setting queue
   Bind(list_fd, (struct sockaddr*)&my_server_addr);
   Listen(list_fd, BACKLOG);
 
-  // used for select management and monitor
   // used for select management and monitor
   int i_fd = 0, n_ready = 0;
   fd_set fdset;
@@ -79,6 +91,12 @@ void w_routine()
 
   while (1)
   {
+    // critic section used to control flag
+    sigprocmask(SIG_BLOCK, &new_mask, NULL);
+
+    if(exit_flag == 1)
+      break;
+
     FD_ZERO(&fdset);
     FD_SET(list_fd, &fdset);
     //re update fdset with fd_open monitor table
@@ -88,12 +106,23 @@ void w_routine()
 
     visit_tree(connected_wallet, visitConnectedWallet);
 
-    while ( (n_ready = select(max_fd + 1, &fdset, NULL, NULL, NULL)) < 0 );
-    if (n_ready < 0 )
-    { /* on real error exit */
+    while ( (n_ready = pselect(max_fd + 1, &fdset, NULL, NULL, NULL, &old_mask)) < 0 );
+
+    if(n_ready < 0 && errno == EINTR)
+    {
+      sigprocmask(SIG_UNBLOCK, &new_mask, NULL); // unlock if signal's != SIGINT
+      continue;
+    }
+
+    if(n_ready < 0)
+    {
       perror("select error");
       exit(1);
     }
+
+    sigprocmask(SIG_UNBLOCK, &new_mask, NULL);
+    // exit critic section unlocking signal
+
 
     /***************************
         Socket connections
@@ -123,43 +152,47 @@ void w_routine()
     {
       // selecting i_fd to serve
       i_fd++;
-      if (!fd_open[i_fd])
+      if(!fd_open[i_fd])
         continue;
 
       // if socket wakeup
-      if (FD_ISSET(i_fd, &fdset))
+      if(FD_ISSET(i_fd, &fdset))
       {
         n_ready--;
         response = recvInt(i_fd, &request);
-        if (response != 0)
+
+        /************************************
+         * if closed because EOF while Read;
+         ************************************/
+        if(response != 0)
         {
-          fprintf(stderr,"Closed connection\n");
+          fprintf(stderr, "Closed connection\n");
           //closing and choosing new max fd to monitor
           fd_open[i_fd] = 0;
           close(i_fd);
-          Tree found = remove_from_tree(connected_wallet, (void *)&i_fd, compare_by_fd);
+          Tree found = remove_from_tree(connected_wallet, (void *) &i_fd, compare_by_fd);
           if(found != NULL)
             free(found);
 
           //updating max fd with the last open in fd_open
-          if (max_fd == i_fd)
+          if(max_fd == i_fd)
           {
-            while (fd_open[--i_fd] == 0)
-              ;
+            while (fd_open[--i_fd] == 0);
             max_fd = i_fd;
             break;
           }
           continue;
         }
+        /****************/
 
         tid_args[tid_index] = i_fd;
-        switch(request)
+        switch (request)
         {
           case WALLET_CONNECTION:
-            pthread_create(&tid[tid_index], NULL, wallet_connection, (void *)&tid_args[tid_index]);
+            pthread_create(&tid[tid_index], NULL, wallet_connection, (void *) &tid_args[tid_index]);
             break;
           case TRANSACTION:
-            pthread_create(&tid[tid_index], NULL, receive_transaction, (void *)&tid_args[tid_index]);
+            pthread_create(&tid[tid_index], NULL, receive_transaction, (void *) &tid_args[tid_index]);
             break;
           default:
             fprintf(stderr, "Wallet[%d]: request received is not correct\n", getpid());
@@ -168,7 +201,13 @@ void w_routine()
         tid_index++;
       }
     }
-    for(int j=0; j < tid_index;  j++)
-      pthread_join(tid[j], NULL);
   }
+  //free(connected_wallet);
+
+  for(int j=0; j < tid_index;  j++)
+    pthread_join(tid[j], NULL);
+
+  pthread_mutex_destroy(&mtx_tree);
+
+  exit(EXIT_SUCCESS);
 }

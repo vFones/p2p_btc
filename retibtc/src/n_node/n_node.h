@@ -14,6 +14,7 @@
 #include <time.h>
 #include <sys/stat.h> // mkfifo
 #include <fcntl.h> // open
+#include <signal.h>
 
 #include "../../include/io.h"
 #include "../../include/net.h"
@@ -27,10 +28,10 @@
 short node_port;
 short wallet_port;
 
-struct sockaddr_in *node_info;
 Tree connected_node;
 Tree connected_wallet;
 
+int exit_flag = 0;
 
 int fifo_fd;
 int max_fd;

@@ -1,5 +1,39 @@
 #include "n_node.h"
 
+int child_flag = 0;
+
+// avoiding creation of zombie child
+// POSIX because not using SA_RESTART
+void sigchld_handl()
+{
+  int errno_save;
+  int status;
+  pid_t pid;
+  //save errno current value
+  errno_save = errno;
+  do{
+    errno = 0;
+    // waiting any sons
+    pid = waitpid(WAIT_ANY, &status, WNOHANG);
+  } while(pid > 0);
+  errno = errno_save;
+  //gapil implementation of sigchld handler
+}
+
+void sig_handler(int sig_no)
+{
+  if(sig_no == SIGINT)
+  {
+    printf("\nCaptured C-c, closing node.\n");
+    exit_flag = 1;
+  }
+  if(sig_no == SIGCHLD)
+  {
+    printf("\nSons crashed.\n");
+    child_flag = 1;
+  }
+}
+
 
 int main(int argc, char **argv)
 {
@@ -36,6 +70,15 @@ int main(int argc, char **argv)
   pid_t node_server = 0;
   pid_t wallet_server = 0;
 
+  exit_flag = 0;
+  struct sigaction sig_act;
+  sig_act.sa_handler = sig_handler;
+  sig_act.sa_flags = 0;
+  sigemptyset(&sig_act.sa_mask);
+  sigaction(SIGINT, &sig_act, NULL);
+  sigaction(SIGCHLD, &sig_act, NULL);
+
+
   // process used to handle node connection
   if ((node_server = fork()) < 0)
   {
@@ -52,7 +95,6 @@ int main(int argc, char **argv)
       perror("wallet_server fork()");
       exit(EXIT_FAILURE);
     }
-    // TODO: change wait(NULL2) to SIGCHLD handler with p_select
   }
 
   if (node_server == 0)
@@ -61,17 +103,18 @@ int main(int argc, char **argv)
   if(wallet_server == 0)
     w_routine();
 
+
   //main process
   if(node_server && wallet_server)
   {
-    wait(&node_server);
-    wait(&wallet_server);
-    fprintf(stderr, "[%d] forked into [%d] and [%d]\n", getpid(), node_server, wallet_server);
+    if(child_flag)
+      sigchld_handl();
 
-    // pthread_mutex_destroy(&mtx_fd);
-    // pthread_mutexattr_destroy(&mtx_fd_attr);
-    // exit(EXIT_SUCCESS);
-
+    if(exit_flag)
+    {
+      sigchld_handl();
+      unlink(FIFOPATH);
+      exit(EXIT_SUCCESS);
+    }
   }
-
 }
