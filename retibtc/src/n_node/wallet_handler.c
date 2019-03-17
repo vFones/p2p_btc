@@ -26,35 +26,32 @@ static void* receive_transaction(void *arg)
   int fd = *(int*)arg;
   struct transaction trns;
   int response = 0;
-  printf("Wallet_handler [%d]: receiving transaction...\n", (int)pthread_self());
+  printf("Wallet_handler[%d]: receiving transaction...\n", getpid());
   // receiv transaction from w_node and write down to node_handler
   Read(fd, &trns, sizeof(trns));
   Write(fifo_fd, &trns, sizeof(trns));
 
-  recvInt(fifo_fd, &response);
-  printf("received from fifo confirm\n");
+  //recvInt(fifo_fd, &response);
+  //printf("received from fifo confirm: %d\n", response);
 
-  sendInt(fd, response);
+  sendInt(fd, 1);
 
   pthread_exit(NULL);
 }
 
-void sig_handler(int sign_no)
-{
-  if(sign_no == SIGINT)
-    exit_flag = 1;
-}
 
 void w_routine()
 {
   printf("I'm [%d] forked from [%d]\n", getpid(), getppid());
 
-  int opt_value = 1;
-  int list_fd = 0;
+  exit_flag = 0;
 
   pthread_mutex_init(&mtx_tree, NULL);
 
+  int list_fd = 0;
   list_fd = Socket(AF_INET, SOCK_STREAM, 0);
+
+  int opt_value = 1;
   setsockopt(list_fd, SOL_SOCKET, SO_REUSEADDR, &opt_value, sizeof(int));
 
   /* installazione degli handler dei segnali */
@@ -209,9 +206,12 @@ void w_routine()
     }
   }
   //free(connected_wallet);
+  for (i_fd = 0; i_fd <= max_fd; i_fd++)
+    if (fd_open[i_fd])
+      close(fd_open[i_fd]);
 
-  for(int j=0; j < tid_index;  j++)
-    pthread_join(tid[j], NULL);
+  //for(int j=0; j < tid_index;  j++)
+  //  pthread_join(tid[j], NULL);
 
   pthread_mutex_destroy(&mtx_tree);
 

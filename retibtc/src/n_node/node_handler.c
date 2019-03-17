@@ -261,8 +261,8 @@ static void* fifo_handler()
   {
     struct transaction trns;
     Read(fifo_fd, &trns, sizeof(trns));
-    printf("package from %s:%hu\n", trns.src.address, trns.src.port);
-
+    printf("package from %s:%hu \n", trns.src.address, trns.src.port);
+    /*
     //creating block with transaction
     struct block b = create_block(trns);
 
@@ -277,17 +277,11 @@ static void* fifo_handler()
     //addBlockToBlockchain(blockchain, b);
 
     printf("sending confirm to fifo\n");
-
+    */
     sendInt(fifo_fd, 1);
   }
-  return NULL;
 }
 
-void sig_handler(int sign_no)
-{
-  if(sign_no == SIGINT)
-    exit_flag = 1;
-}
 
 /******************
    N_NODE ROUTINE
@@ -306,8 +300,6 @@ void n_routine()
   sigaddset(&new_mask, SIGINT);
   sigprocmask(SIG_SETMASK, NULL, &old_mask);
 
-  int opt_value = 1;
-  int list_fd = 0; // main FDs to monitor
 
   //mutex dinamically allcoated
   pthread_mutex_init(&mtx_tree, NULL);
@@ -318,8 +310,12 @@ void n_routine()
   pthread_t fifotid;
   pthread_create(&fifotid, NULL, fifo_handler, NULL);
 
+  // main FDs to monitor
+  int list_fd = 0;
   list_fd = Socket(AF_INET, SOCK_STREAM, 0);
+
   // socket option with SO_REUSEADDR
+  int opt_value = 1;
   setsockopt(list_fd, SOL_SOCKET, SO_REUSEADDR, &opt_value, sizeof(int));
 
   struct sockaddr_in my_server_addr;
@@ -495,10 +491,12 @@ void n_routine()
 
   //destroy from here free(blockchain->genesis);
   //free(connected_node);
+  for (i_fd = 0; i_fd <= max_fd; i_fd++)
+    if (fd_open[i_fd])
+      close(fd_open[i_fd]);
 
-
-  for(int j=0; j < tid_index;  j++)
-    pthread_join(tid[j], NULL);
+  //for(int j=0; j < tid_index;  j++)
+  //  pthread_join(tid[j], NULL);
 
   pthread_mutex_destroy(&mtx_tree);
 

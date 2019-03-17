@@ -31,13 +31,13 @@ short wallet_port;
 Tree connected_node;
 Tree connected_wallet;
 
-int exit_flag = 0;
+int exit_flag;
 
 int fifo_fd;
 int max_fd;
 int *fd_open;
 
-void usage();
+void sig_handler(int sig_no);
 void n_routine();
 void w_routine();
 
