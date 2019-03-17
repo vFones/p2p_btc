@@ -8,7 +8,7 @@ void fillAddressIPv4(struct sockaddr_in *socket_address, char *ip_address, short
   socket_address->sin_port = htons(port);
   if(ip_address != NULL)
   {
-    if ((inet_pton(AF_INET, ip_address, &(socket_address->sin_addr))) <= 0)
+    if((inet_pton(AF_INET, ip_address, &(socket_address->sin_addr))) <= 0)
     {
       perror("Address creation error");
       exit(EXIT_FAILURE);
@@ -19,20 +19,20 @@ void fillAddressIPv4(struct sockaddr_in *socket_address, char *ip_address, short
 }
 
 
-Conn_node getsockNode(int fd)
+struct connected_node getsockNode(int fd)
 {
   struct sockaddr_in tmpaddr;
   socklen_t lentmpaddr = sizeof(tmpaddr);
-  Conn_node node = (Conn_node)Malloc(SIZE_NODE);
-
+  //Conn_node node = (Conn_node)Malloc(SIZE_NODE);
+  struct connected_node node;
   if(getsockname(fd, (struct sockaddr *) &tmpaddr, &lentmpaddr) == -1)
   {
     perror("getsockname -> Node:");
-    return NULL;
+    return node;
   }
-  strncpy(node->address, inet_ntoa(tmpaddr.sin_addr),LEN_ADDRESS);
-  node->port = ntohs(tmpaddr.sin_port);
-  node->fd = fd;
+  strncpy(node.address, inet_ntoa(tmpaddr.sin_addr), LEN_ADDRESS);
+  node.port = ntohs(tmpaddr.sin_port);
+  node.fd = fd;
 
   return node;
 }
@@ -42,14 +42,14 @@ Conn_node getpeerNode(int fd)
 {
   struct sockaddr_in tmpaddr;
   socklen_t lentmpaddr = sizeof(tmpaddr);
-  Conn_node node = (Conn_node)Malloc(SIZE_NODE);
+  Conn_node node = (Conn_node) Malloc(SIZE_NODE);
 
-  if( getpeername(fd, (struct sockaddr *) &tmpaddr, &lentmpaddr) == -1)
+  if(getpeername(fd, (struct sockaddr *) &tmpaddr, &lentmpaddr) == -1)
   {
     perror("getpeername -> Node:");
     return NULL;
   }
-  strncpy(node->address, inet_ntoa(tmpaddr.sin_addr),LEN_ADDRESS);
+  strncpy(node->address, inet_ntoa(tmpaddr.sin_addr), LEN_ADDRESS);
   node->port = ntohs(tmpaddr.sin_port);
   node->fd = fd;
 
@@ -59,8 +59,16 @@ Conn_node getpeerNode(int fd)
 
 void visitConnectedNode(void *args)
 {
-  Conn_node n = (Conn_node)args;
+  Conn_node n = (Conn_node) args;
   printf("Node = %s:%hu in fd [%d]\n", n->address, n->port, n->fd);
+
+}
+
+
+void visitConnectedWallet(void *args)
+{
+  Conn_node w = (Conn_node) args;
+  printf("Wallet = %s:%hu in fd [%d]\n", w->address, w->port, w->fd);
 }
 
 
@@ -69,8 +77,8 @@ bool compare_by_addr(void *x, void *y)
   Conn_node a = (Conn_node) x;
   Conn_node b = (Conn_node) y;
 
-  if( !strncmp(a->address,b->address, LEN_ADDRESS) &&
-      (a->port == b->port) )
+  if(!strncmp(a->address, b->address, LEN_ADDRESS) &&
+     (a->port == b->port))
     return true;
   return false;
 }
@@ -78,11 +86,12 @@ bool compare_by_addr(void *x, void *y)
 
 bool compare_by_fd(void *x, void *y)
 {
-  int a = *(int*)x, b = *(int*)y;
+  int a = *(int *) x, b = *(int *) y;
   if(a == b)
-      return true;
+    return true;
   return false;
 }
+
 
 struct confirm_new_node choose_node()
 {
@@ -90,7 +99,7 @@ struct confirm_new_node choose_node()
   char buffer[BUFFLEN];
   struct confirm_new_node new_node;
 
-  new_node.node = (Conn_node)Malloc(SIZE_NODE);
+  new_node.node = (Conn_node) Malloc(SIZE_NODE);
 
   printf("\nInsert a valid IPv4 address: ");
   scanf(" %s", buffer);

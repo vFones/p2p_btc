@@ -29,10 +29,11 @@ struct confirm_new_node{
 
 void fillAddressIPv4(struct sockaddr_in *socket_address, char *ip_address, short port);
 
-Conn_node getsockNode(int fd);
+struct connected_node getsockNode(int fd);
 Conn_node getpeerNode(int fd);
 
 void visitConnectedNode(void *args);
+void visitConnectedWallet(void *args);
 bool compare_connected_node(void *x, void *y);
 
 bool compare_by_addr(void *x, void *y);
