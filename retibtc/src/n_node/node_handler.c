@@ -222,17 +222,65 @@ static void* node_connection(void* arg)
   pthread_exit(NULL);
 }
 
+
+static struct block create_block(struct transaction trns)
+{
+  struct block b;
+  b.info = &trns;
+  b.n_block = blockchain->b_size+1;
+  b.randomtime = 5+(rand()%11);
+
+  getLatestSHA256(blockchain, b.prev_SHA256);
+
+  //strncpy((char *)b.prev_SHA256, (const char *restrict)src, SHA256_DIGEST_LENGTH);
+
+  // calculate hash of new block
+  char *tmpb_infoSHA256 = (char*)Malloc(SHA256_DIGEST_LENGTH);
+  SHA256(b.info, sizeof(b.info), (unsigned char *)tmpb_infoSHA256);
+
+  //create a string with previous hash + new tmp hash
+  char *tmpSHA256 = (char*)Malloc(SHA256_DIGEST_LENGTH * 2 + 2);
+  strncpy(tmpSHA256, (const char * restrict)b.prev_SHA256, SHA256_DIGEST_LENGTH);
+  strncpy(&tmpSHA256[SHA256_DIGEST_LENGTH], (const char *)tmpb_infoSHA256, SHA256_DIGEST_LENGTH);
+  tmpSHA256[SHA256_DIGEST_LENGTH*2 + 1] = '\0';
+  free(tmpb_infoSHA256);
+
+  // calculate hash of new string just created and assign to block
+  unsigned char *hash = (unsigned char*)Malloc(SHA256_DIGEST_LENGTH);
+  SHA256((unsigned char *)tmpSHA256, strlen(tmpSHA256), hash);
+  free(tmpSHA256);
+  strncpy((char *) b.SHA256, tmpSHA256, SHA256_DIGEST_LENGTH);
+
+  return b;
+}
+
+
 static void* fifo_handler()
 {
   while(1)
   {
     struct transaction trns;
-    printf("handling fifos\n");
     Read(fifo_fd, &trns, sizeof(trns));
     printf("package from %s:%hu\n", trns.src.address, trns.src.port);
-    // TODO:
-    pthread_exit(NULL);
+
+    //creating block with transaction
+    struct block b = create_block(trns);
+
+    //waiting rand sec
+    wait(&b.randomtime);
+
+    //if created block is with already old(received another block)
+    while(b.n_block > blockchain->b_size)
+      b = create_block(trns);
+      //recreate
+
+    //addBlockToBlockchain(blockchain, b);
+
+    printf("sending confirm to fifo\n");
+
+    sendInt(fifo_fd, 1);
   }
+  return NULL;
 }
 
 /******************
@@ -247,8 +295,9 @@ void n_routine()
   pthread_t fifotid;
   //mutex dinamically allcoated
   pthread_mutex_init(&mtx_tree, NULL);
+  srand(time(NULL));
 
-  //setting fd to monitor
+  // opening fifo and handling with a thread.
   fifo_fd = open(FIFOPATH, O_RDWR);
   pthread_create(&fifotid, NULL, fifo_handler, NULL);
 

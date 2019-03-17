@@ -17,7 +17,7 @@ set(RETIBTC ${CMAKE_SOURCE_DIR}/retibtc)
 
 #set libraries folder
 link_directories(${RETIBTC}/lib)
-set(LIBRARY_OUTPUT_PATH ${RETIBTC}/lib/shared)
+set(LIBRARY_OUTPUT_PATH ${RETIBTC}/lib/static)
 
 #set use of system style include (e.g. #include <libs.h>)
 include_directories(SYSTEM ${RETIBTC}/include)
@@ -33,7 +33,8 @@ if( OpenSSL_FOUND )
     if(${CMAKE_SYSTEM_NAME} MATCHES Darwin)
       set(OPENSSL_ROOT_DIR /usr/local/opt/openssl)
       set(OPENSSL_LIBRARIES /usr/local/opt/openssl/lib)
-      set(OPENSSL_INCLUDE_DIR /usr/local/opt/openssl/include/)
+      set(OPENSSL_INCLUDE_DIR /usr/local/opt/openssl/include)
+      include_directories(SYSTEM /usr/local/opt/openssl/include)
     endif()
     message(STATUS "Using OpenSSL ${OPENSSL_VERSION}")
     message(STATUS "OpenSSL include dir: ${OPENSSL_INCLUDE_DIR}")
@@ -42,15 +43,15 @@ endif()
 
 #add all files in lib/ as libraries
 AUX_SOURCE_DIRECTORY(${RETIBTC}/lib LIBS_FILES)
-add_library(libraries SHARED ${LIBS_FILES})
+add_library(libraries ${LIBS_FILES})
 
 #link libraries to executable
 set(N_NODE_LIBS ${RETIBTC}/src/n_node/node_handler.c ${RETIBTC}/src/n_node/wallet_handler.c)
 add_executable(n_node ${RETIBTC}/src/n_node/main.c ${N_NODE_LIBS})
-target_link_libraries(n_node libraries)
+target_link_libraries(n_node libraries OpenSSL::SSL)
 
 set(WALLET_LIBS ${RETIBTC}/src/w_node/w_node.c)
 add_executable(w_node ${RETIBTC}/src/w_node/main.c ${WALLET_LIBS})
-target_link_libraries(w_node libraries)
+target_link_libraries(w_node libraries OpenSSL::SSL)
 
 #target_link_libraries(peer libraries OpenSSL::SSL)

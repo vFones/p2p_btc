@@ -3,11 +3,11 @@
 Blockchain create_blockchain()
 {
   struct block genesis;
-  genesis.sha1 = "GENESIS";
-  genesis.prev_sha1 = NULL;
+  strncpy((char *)genesis.prev_SHA256, "0000000000000000000000000000000000000000000000000000000000000000", SHA256_DIGEST_LENGTH);
+  strncpy((char *)genesis.SHA256, "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f", SHA256_DIGEST_LENGTH);
   genesis.n_block = 0;
-  genesis.randomtime = 0;
-  genesis.info = NULL;
+  genesis.randomtime = 15;
+  genesis.info= NULL;
 
   Blockchain blockchain = (Blockchain)Malloc(BCHAIN_SIZE);
 
@@ -24,6 +24,12 @@ struct block getBlockFromNode(Tree node)
 {
   struct block b = *(struct block *) node->info;
   return b;
+}
+
+void getLatestSHA256(Blockchain blockchain, unsigned char *SHA256)
+{
+  struct block block = *(struct block *)blockchain->tail->info;
+  strncpy((char *)SHA256, (char *)block.SHA256, SHA256_DIGEST_LENGTH);
 }
 
 
@@ -88,8 +94,9 @@ void addBlockToBlockchain(Blockchain blockchain, struct block block)
 }
 
 
-// return block with that level
-struct block searchByLevel(Blockchain blockchain, int level) {
+// return block with that level in blockchain
+struct block searchByLevel(Blockchain blockchain, int level)
+{
   Tree tmp = blockchain->genesis->kids;
   struct block b;
   int i = 0;
