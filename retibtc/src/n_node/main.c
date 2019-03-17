@@ -39,7 +39,7 @@ int main(int argc, char **argv)
 {
   int opt;
   int *flags = (int *)calloc(3, sizeof(int));
-  while ( (opt = getopt(argc, argv, "n:w:")) != -1)
+  while ((opt = getopt(argc, argv, "n:w:")) != -1)
   {
     switch(opt)
     {
@@ -80,7 +80,7 @@ int main(int argc, char **argv)
 
 
   // process used to handle node connection
-  if ((node_server = fork()) < 0)
+  if((node_server = fork()) < 0)
   {
     perror("node_server fork()");
     exit(EXIT_FAILURE);
@@ -88,16 +88,16 @@ int main(int argc, char **argv)
 
 
   //main proc creating wallet proc
-  if (node_server)
+  if(node_server)
   {
-    if ((wallet_server = fork()) < 0)
+    if((wallet_server = fork()) < 0)
     {
       perror("wallet_server fork()");
       exit(EXIT_FAILURE);
     }
   }
 
-  if (node_server == 0)
+  if(node_server == 0)
     n_routine();
 
   if(wallet_server == 0)
@@ -107,6 +107,9 @@ int main(int argc, char **argv)
   //main process
   if(node_server && wallet_server)
   {
+    wait(&node_server);
+    wait(&wallet_server);
+
     if(child_flag)
       sigchld_handl();
 
