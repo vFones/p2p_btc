@@ -54,12 +54,13 @@ void w_routine()
   int opt_value = 1;
   setsockopt(list_fd, SOL_SOCKET, SO_REUSEADDR, &opt_value, sizeof(int));
 
-  /* installazione degli handler dei segnali */
-  struct sigaction act;
+  //sig_action
+  sig_act.sa_handler = sig_handler;
+  sig_act.sa_flags = 0;
+
   sigset_t new_mask, old_mask;
-  act.sa_handler = sig_handler;
-  sigemptyset(&act.sa_mask);
-  sigaction(SIGINT, &act, NULL);
+  sigemptyset(&sig_act.sa_mask);
+  sigaction(SIGINT, &sig_act, NULL);
   sigaddset(&new_mask, SIGINT);
   sigprocmask(SIG_SETMASK, NULL, &old_mask);
 

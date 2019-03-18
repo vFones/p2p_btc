@@ -262,7 +262,7 @@ static void* fifo_handler()
     struct transaction trns;
     Read(fifo_fd, &trns, sizeof(trns));
     printf("package from %s:%hu \n", trns.src.address, trns.src.port);
-    /*
+
     //creating block with transaction
     struct block b = create_block(trns);
 
@@ -274,12 +274,12 @@ static void* fifo_handler()
       b = create_block(trns);
       //recreate
 
-    //addBlockToBlockchain(blockchain, b);
+    addBlockToBlockchain(blockchain, b);
 
     printf("sending confirm to fifo\n");
-    */
     sendInt(fifo_fd, 1);
   }
+  return NULL;
 }
 
 
@@ -291,17 +291,19 @@ void n_routine()
   printf("I'm [%d] forked from [%d]\n", getpid(), getppid());
   srand(time(NULL));
 
-  /* installazione degli handler dei segnali */
-  struct sigaction act;
+  //sig_action
+
+  sig_act.sa_handler = sig_handler;
+  sig_act.sa_flags = 0;
+
   sigset_t new_mask, old_mask;
-  act.sa_handler = sig_handler;
-  sigemptyset(&act.sa_mask);
-  sigaction(SIGINT, &act, NULL);
+  sigemptyset(&sig_act.sa_mask);
+  sigaction(SIGINT, &sig_act, NULL);
   sigaddset(&new_mask, SIGINT);
   sigprocmask(SIG_SETMASK, NULL, &old_mask);
 
 
-  //mutex dinamically allcoated
+  //mutex dinamically allocated
   pthread_mutex_init(&mtx_tree, NULL);
 
 

@@ -71,7 +71,6 @@ int main(int argc, char **argv)
   pid_t wallet_server = 0;
 
   exit_flag = 0;
-  struct sigaction sig_act;
   sig_act.sa_handler = sig_handler;
   sig_act.sa_flags = 0;
   sigemptyset(&sig_act.sa_mask);
