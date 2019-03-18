@@ -20,13 +20,12 @@
 #include "../../include/net.h"
 #include "../../include/tree.h"
 #include "../../include/sockwrap.h"
+#include "../../include/blockchain.h"
 #include "../../include/transaction.h"
 
-#define MSG "Usage: ./n_node -n node <service_port> -w <wallet_service port>\n"
-#define FIFOPATH "/tmp/wallet2node.fifo"
+#define MSG "Usage: ./n_node -p <PORT TO EXPOSE>\n"
 
-short node_port;
-short wallet_port;
+short service_port;
 
 Tree connected_node;
 Tree connected_wallet;
@@ -34,12 +33,10 @@ Tree connected_wallet;
 int exit_flag;
 struct sigaction sig_act;
 
-int fifo_fd;
 int max_fd;
 int *fd_open;
 
-void sig_handler(int sig_no);
 void n_routine();
-void w_routine();
+void sig_handler(int sig_no);
 
 #endif

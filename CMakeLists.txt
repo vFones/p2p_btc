@@ -46,7 +46,7 @@ AUX_SOURCE_DIRECTORY(${RETIBTC}/lib LIBS_FILES)
 add_library(libraries ${LIBS_FILES})
 
 #link libraries to executable
-set(N_NODE_LIBS ${RETIBTC}/src/n_node/node_handler.c ${RETIBTC}/src/n_node/wallet_handler.c)
+set(N_NODE_LIBS ${RETIBTC}/src/n_node/node_handler.c)
 add_executable(n_node ${RETIBTC}/src/n_node/main.c ${N_NODE_LIBS})
 target_link_libraries(n_node libraries OpenSSL::SSL)
 
