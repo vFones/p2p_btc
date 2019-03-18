@@ -5,8 +5,8 @@
 #include <openssl/sha.h>
 
 struct block{
-  unsigned char prev_SHA256[SHA256_DIGEST_LENGTH];
-  unsigned char SHA256[SHA256_DIGEST_LENGTH];
+  char *prev_SHA256;
+  char *SHA256;
   int n_block;
   int randomtime;
   void *info;
@@ -28,8 +28,10 @@ Blockchain create_blockchain();
 void addBlockToBlockchain(Blockchain blockchain, struct block block);
 
 struct block getBlockFromNode(Tree node);
-unsigned char *getLatestSHA256(Blockchain blockchain);
+char *getLatestSHA256(Blockchain blockchain);
 
 struct block searchByLevel(Blockchain blockchain, int level);
+
+
 
 #endif

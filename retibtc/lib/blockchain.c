@@ -2,18 +2,22 @@
 
 Blockchain create_blockchain()
 {
-  struct block genesis;
-  strncpy((char *)genesis.prev_SHA256, "0000000000000000000000000000000000000000000000000000000000000000", SHA256_DIGEST_LENGTH);
-  strncpy((char *)genesis.SHA256, "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f", SHA256_DIGEST_LENGTH);
-  genesis.n_block = 0;
-  genesis.randomtime = 15;
-  genesis.info= NULL;
+  struct block *gen_block = (Block)Malloc(BLOCK_SIZE);
+
+  printf("creating blockchain: genesis\n");
+  gen_block->prev_SHA256 = "0000000000000000000000000000000000000000000000000000000000000000";
+  printf("prev_id: %s\n",gen_block->prev_SHA256);
+  gen_block->SHA256 = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f";
+  printf("id: %s\n",gen_block->SHA256);
+  gen_block->n_block = 0;
+  gen_block->randomtime = 15;
+  gen_block->info = NULL;
 
   Blockchain blockchain = (Blockchain)Malloc(BCHAIN_SIZE);
 
   blockchain->genesis = (Tree)Malloc(TREE_SIZE);
+  blockchain->genesis->info = gen_block;
   blockchain->tail = blockchain->genesis;
-  blockchain->genesis->info = (void *)&genesis;
 
   return blockchain;
 }
@@ -26,12 +30,13 @@ struct block getBlockFromNode(Tree node)
   return b;
 }
 
-unsigned char *getLatestSHA256(Blockchain blockchain)
+char *getLatestSHA256(Blockchain blockchain)
 {
-  struct block block = *(struct block *)blockchain->tail->info;
-  unsigned char *latest= (unsigned char *)Malloc(SHA256_DIGEST_LENGTH);
-  strncpy((char *)latest, (char *)&block.SHA256, SHA256_DIGEST_LENGTH);
-  printf("string copied...\n");
+  struct block *block = NULL;
+  block = (struct block*)blockchain->tail->info;
+
+  char *latest = block->SHA256;
+  printf("gotLatestSHA256...\n");
   return latest;
 }
 
