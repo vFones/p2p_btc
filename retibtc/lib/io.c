@@ -4,11 +4,11 @@ ssize_t Read(int fd, void *buff, size_t count)
 {
   size_t nleft;
   ssize_t nread;
-  char * buf = (char*) buff;
+
   nleft = count;
   while (nleft > 0)
   {
-    if( (nread = read(fd, buf, nleft)) < 0)
+    if( (nread = read(fd, buff, nleft)) < 0)
     {
       if (errno == EINTR)
         continue;
@@ -21,15 +21,15 @@ ssize_t Read(int fd, void *buff, size_t count)
         break;
 
     /*if you are here, you have actually read bytes*/
-    nleft -= nread; /* set left to read */
-    buf += nread; /* set pointer */
+    buff = (char *)buff + nread;/* set left to read */
+    nleft = nleft - nread;/* set pointer */
   }
   return nleft;
 }
 
 
 
-ssize_t Write(int fd, const void *buff, size_t count)
+ssize_t Write(int fd, void *buff, size_t count)
 {
   size_t nleft;
   ssize_t nwritten;
@@ -48,7 +48,7 @@ ssize_t Write(int fd, const void *buff, size_t count)
 
     /*if you are here, you have actually write bytes*/
     buff = (char*)buff + nwritten; /* set pointer */
-    nleft -= nwritten;/* set left to write */
+    nleft = nleft - nwritten;/* set left to write */
   }
   return nleft;
 }
@@ -82,7 +82,7 @@ int recvInt(int fd, int *n)
 
 int sendChar(int fd, char n)
 {
-  if( Write(fd, &n, 1) != 0 )
+  if( Write(fd, (void *)&n, 1) != 0 )
   {
     perror("sendChar");
     return -1;
