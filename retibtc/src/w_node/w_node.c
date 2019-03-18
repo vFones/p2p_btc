@@ -59,7 +59,7 @@ static void create_transaction(int choice)
       scanf(" %s", buffer);
       cryptocurrecy = strtof(buffer, NULL);
 
-      trns = fillTransaction(wallet_info, wallet_info, cryptocurrecy );
+      trns = fillTransaction(wallet_info, wallet_info, cryptocurrecy);
 
       sendInt(node_info.fd, TRANSACTION);
       sendTrns(node_info.fd, trns);
@@ -70,8 +70,10 @@ static void create_transaction(int choice)
       if(!confirm)
         fprintf(stderr, "Transaction not validate, aborting operation\n");
       else
+      {
+        printf("New wallet amount.\n");
         wallet_amount += cryptocurrecy;
-
+      }
       break;
 
     default:
@@ -163,10 +165,10 @@ void wallet_routine()
     ***************************/
   	if (FD_ISSET(node_info.fd, &fset))
     {
-      int error = recvInt(node_info.fd, &request);
-      if(error != 0)
+      int error;
+
+      if((error = recvInt(node_info.fd, &request)))
       {
-        fprintf(stderr,"Socket error: connection rejected from peer.\n");
         close(node_info.fd);
         exit(EXIT_FAILURE);
       }
@@ -186,6 +188,5 @@ void wallet_routine()
       }
     }
   }
-  return;
 }
 

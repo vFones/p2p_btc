@@ -46,9 +46,10 @@ int main(int argc, char **argv)
   sendInt(node_info.fd, WALLET_CONNECTION);
 
   //TODO: auth
+  int response = 0;
 
-
-  wallet_routine();
+  if (!recvInt(node_info.fd, &response) && response)
+    wallet_routine();
 
   exit(EXIT_SUCCESS);
 }
