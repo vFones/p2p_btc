@@ -251,6 +251,8 @@ static struct block create_block(struct transaction trns)
   free(tmpSHA256);
   strncpy((char *) b.SHA256, tmpSHA256, SHA256_DIGEST_LENGTH);
 
+  printf("Created block\n");
+
   return b;
 }
 
@@ -361,8 +363,11 @@ void n_routine()
     sigprocmask(SIG_BLOCK, &new_mask, NULL);
 
     if(exit_flag == 1)
+    {
+      exit_flag = 0;
       break;
-
+    }
+    
     FD_ZERO(&fdset);
     FD_SET(STDIN_FILENO, &fdset);
     //FD_SET(fifo_fd, &fdset);

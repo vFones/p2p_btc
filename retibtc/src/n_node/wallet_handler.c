@@ -25,7 +25,6 @@ static void* receive_transaction(void *arg)
 {
   int fd = *(int*)arg;
   struct transaction trns;
-  int response = 0;
   printf("Wallet_handler[%d]: receiving transaction...\n", getpid());
   // receiv transaction from w_node and write down to node_handler
   Read(fd, &trns, sizeof(trns));
@@ -99,8 +98,10 @@ void w_routine()
     sigprocmask(SIG_BLOCK, &new_mask, NULL);
 
     if(exit_flag == 1)
+    {
+      exit_flag = 0;
       break;
-
+    }
     FD_ZERO(&fdset);
     FD_SET(list_fd, &fdset);
     //re update fdset with fd_open monitor table
