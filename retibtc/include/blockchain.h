@@ -28,7 +28,7 @@ Blockchain create_blockchain();
 void addBlockToBlockchain(Blockchain blockchain, struct block block);
 
 struct block getBlockFromNode(Tree node);
-void getLatestSHA256(Blockchain blockchain, unsigned char *SHA256);
+unsigned char *getLatestSHA256(Blockchain blockchain);
 
 struct block searchByLevel(Blockchain blockchain, int level);
 

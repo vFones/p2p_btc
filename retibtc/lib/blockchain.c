@@ -26,11 +26,13 @@ struct block getBlockFromNode(Tree node)
   return b;
 }
 
-void getLatestSHA256(Blockchain blockchain, unsigned char *SHA256)
+unsigned char *getLatestSHA256(Blockchain blockchain)
 {
   struct block block = *(struct block *)blockchain->tail->info;
-  strncpy((char *)SHA256, (char *)&block.SHA256, SHA256_DIGEST_LENGTH);
+  unsigned char *latest= (unsigned char *)Malloc(SHA256_DIGEST_LENGTH);
+  strncpy((char *)latest, (char *)&block.SHA256, SHA256_DIGEST_LENGTH);
   printf("string copied...\n");
+  return latest;
 }
 
 
