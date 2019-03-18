@@ -39,4 +39,6 @@ int *fd_open;
 void n_routine();
 void sig_handler(int sig_no);
 
+void visitBlock(void* arg);
+
 #endif

@@ -207,6 +207,20 @@ static void* node_connection(void* arg)
 }
 
 
+void visitBlock(void *arg)
+{
+  struct block b = *(struct block *)arg;
+  if(!b.n_block)
+    printf("Block[GENESIS]\n");
+  else
+  {
+    struct transaction *trns = b.info;
+    printf("block[%d]\t [%s:%hd -> %s:%hu] [%0.2f BTC] [%d] \n", \
+      b.n_block, trns->src.address, trns->src.port, \
+      trns->dst.address, trns->dst.port, trns->amount, trns->random);
+  }
+}
+
 static struct block create_block(struct transaction trns)
 {
   struct block b;
@@ -214,27 +228,29 @@ static struct block create_block(struct transaction trns)
   b.n_block = blockchain->b_size+1;
   b.randomtime = 5+(rand()%11);
 
-  unsigned char *latestSHA = getLatestSHA256(blockchain);
-
-  strncpy((char *)b.prev_SHA256, (char *)latestSHA, SHA256_DIGEST_LENGTH);
-
+  b.prev_SHA256 = getLatestSHA256(blockchain);
 
   // calculate hash of new block
-  char *tmpb_infoSHA256 = (char*)Malloc(SHA256_DIGEST_LENGTH);
-  SHA256(b.info, sizeof(b.info), (unsigned char *)tmpb_infoSHA256);
+  unsigned char *tmpb_infoSHA256 = (unsigned char *)Malloc(SHA256_DIGEST_LENGTH);
+  SHA256(b.info, sizeof(b.info), tmpb_infoSHA256);
 
   //create a string with previous hash + new tmp hash
   char *tmpSHA256 = (char*)Malloc(SHA256_DIGEST_LENGTH * 2 + 2);
-  strncpy(tmpSHA256, (const char * restrict)b.prev_SHA256, SHA256_DIGEST_LENGTH);
-  strncpy(&tmpSHA256[SHA256_DIGEST_LENGTH], (const char *)tmpb_infoSHA256, SHA256_DIGEST_LENGTH);
+
+  strncpy(tmpSHA256, b.prev_SHA256, SHA256_DIGEST_LENGTH);
+  strncpy(&tmpSHA256[SHA256_DIGEST_LENGTH], (char *)tmpb_infoSHA256, SHA256_DIGEST_LENGTH);
   tmpSHA256[SHA256_DIGEST_LENGTH*2 + 1] = '\0';
   free(tmpb_infoSHA256);
 
   // calculate hash of new string just created and assign to block
-  unsigned char *hash = (unsigned char*)Malloc(SHA256_DIGEST_LENGTH);
-  SHA256((unsigned char *)tmpSHA256, strlen(tmpSHA256), hash);
+  char *hash = (char*)Malloc(SHA256_DIGEST_LENGTH);
+  SHA256((unsigned char *)tmpSHA256, strlen(tmpSHA256), (unsigned char *)hash);
   free(tmpSHA256);
-  strncpy((char *) b.SHA256, tmpSHA256, SHA256_DIGEST_LENGTH);
+
+  for(int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+    printf("%02x", hash[i]);
+  printf("\n");
+
 
   printf("Created block\n");
 
@@ -270,26 +286,40 @@ static void* receive_transaction(void *arg)
   struct transaction trns;
 
   // receiv transaction from w_node
-  printf("\n*****receiving transaction******\n");
-  recvTrns(fd, &trns);
+
+
+  Read(fd, &trns, sizeof(trns));
+
+  sendInt(fd, 1);
+
   printf("package from %s:%hu\n", trns.src.address, trns.src.port);
 
   //creating block with transaction
-  //struct block b = create_block(trns);
+  struct block b = create_block(trns);
 
   //waiting rand sec
-  //wait(&b.randomtime);
+  printf("Waiting %d sec \n", b.randomtime);
+  printf("prev_sha: %s\n",b.prev_SHA256);
+  printf("sha: %s\n",b.SHA256);
+  sleep((unsigned int)b.randomtime);
+
+  printf("Block[%d]\n",b.n_block);
+  //for(int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+    //printf("%02x", b.prev_SHA256[i]);
+
+
 
   //if created block is with already old(received another block)
-  //while(b.n_block > blockchain->b_size)
-  //  b = create_block(trns);
-  //recreate
+  while(b.n_block <= blockchain->b_size)
+  {
+    printf("Recreating block\n");
+    memset(&b, 0, sizeof(struct block));
+    b = create_block(trns);
+  }
+    //recreate
 
-  //addBlockToBlockchain(blockchain, b);
-
-  printf("sending confirm to wallet\n");
-
-  sendInt(fd, 1);
+  addBlockToBlockchain(blockchain, b);
+  printf("Added to blockchain\n");
 
   pthread_exit(NULL);
 }
@@ -376,17 +406,15 @@ void n_routine()
     FD_SET(list_fd, &fdset);
     //re update fdset with fd_open monitor table
     for (i_fd = 0; i_fd <= max_fd; i_fd++)
-    {
-      printf("fd_open[%d] = %d\n", i_fd, fd_open[i_fd]);
       if(fd_open[i_fd])
         FD_SET(i_fd, &fdset);
-    }
 
 
     printf("\tChoose:\n1) connect to peers;\n2) disconnect from peer\n5) quit\n");
     visit_tree(connected_node, visitConnectedNode);
     printf("\n");
     visit_tree(connected_wallet, visitConnectedWallet);
+    visit_tree(blockchain->genesis, visitBlock);
 
     while ((n_ready = pselect(max_fd + 1, &fdset, NULL, NULL, NULL, &old_mask)) < 0); //reset
 
@@ -466,7 +494,7 @@ void n_routine()
         if(response != 0)
         {
           fprintf(stderr, "Closed connection\n");
-          //closing and choosing new max fd to monitor
+          //closing
           fd_open[i_fd] = 0;
           close(i_fd);
 
