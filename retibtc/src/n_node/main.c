@@ -6,17 +6,15 @@ int child_flag = 0;
 // POSIX because not using SA_RESTART
 void sigchld_handl()
 {
-  int errno_save;
-  int status;
+  int saved_errno;
   pid_t pid;
   //save errno current value
-  errno_save = errno;
   do{
-    errno = 0;
+    saved_errno = errno;
     // waiting any sons
-    pid = waitpid(WAIT_ANY, &status, WNOHANG);
+    pid = waitpid(WAIT_ANY, NULL, WNOHANG);
+    errno = saved_errno;
   } while(pid > 0);
-  errno = errno_save;
   //gapil implementation of sigchld handler
 }
 
@@ -24,7 +22,7 @@ void sig_handler(int sig_no)
 {
   if(sig_no == SIGINT)
   {
-    printf("\nCaptured C-c, closing node.\n");
+    printf("\nCaptured C-c, closing [%d].\n", getpid());
     exit_flag = 1;
   }
   if(sig_no == SIGCHLD)
@@ -73,7 +71,6 @@ int main(int argc, char **argv)
   exit_flag = 0;
   sig_act.sa_handler = sig_handler;
   sig_act.sa_flags = 0;
-  sigemptyset(&sig_act.sa_mask);
   sigaction(SIGINT, &sig_act, NULL);
   sigaction(SIGCHLD, &sig_act, NULL);
 
@@ -106,16 +103,16 @@ int main(int argc, char **argv)
   //main process
   if(node_server && wallet_server)
   {
-    wait(&node_server);
-    wait(&wallet_server);
-
+    printf("Waiting sons\n");
+    wait(NULL);
+    
     if(child_flag)
       sigchld_handl();
 
     if(exit_flag)
     {
       sigchld_handl();
-      unlink(FIFOPATH);
+      printf("Exiting\n");
       exit(EXIT_SUCCESS);
     }
   }

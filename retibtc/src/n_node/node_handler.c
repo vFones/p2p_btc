@@ -261,6 +261,11 @@ static void* fifo_handler()
 {
   while(1)
   {
+    if(exit_flag)
+    {
+      unlink(FIFOPATH);
+      pthread_exit(NULL);
+    }
     struct transaction trns;
     Read(fifo_fd, &trns, sizeof(trns));
     printf("package from %s:%hu \n", trns.src.address, trns.src.port);
@@ -281,7 +286,6 @@ static void* fifo_handler()
     printf("sending confirm to fifo\n");
     sendInt(fifo_fd, 1);
   }
-  return NULL;
 }
 
 
@@ -301,9 +305,10 @@ void n_routine()
   sigset_t new_mask, old_mask;
   sigemptyset(&sig_act.sa_mask);
   sigaction(SIGINT, &sig_act, NULL);
-  sigaddset(&new_mask, SIGINT);
-  sigprocmask(SIG_SETMASK, NULL, &old_mask);
 
+  sigemptyset(&new_mask);
+  sigaddset(&new_mask, SIGINT);
+  sigprocmask(SIG_SETMASK, &new_mask, &old_mask);
 
   //mutex dinamically allocated
   pthread_mutex_init(&mtx_tree, NULL);
@@ -363,10 +368,7 @@ void n_routine()
     sigprocmask(SIG_BLOCK, &new_mask, NULL);
 
     if(exit_flag == 1)
-    {
-      exit_flag = 0;
       break;
-    }
     
     FD_ZERO(&fdset);
     FD_SET(STDIN_FILENO, &fdset);
@@ -389,12 +391,16 @@ void n_routine()
       continue;
     }
 
+
     if(n_ready < 0)
     {
       perror("select error");
       exit(1);
     }
 
+    if(exit_flag == 1)
+      break;
+    
     sigprocmask(SIG_UNBLOCK, &new_mask, NULL);
     // exit critic section unlocking signal
 
@@ -498,12 +504,22 @@ void n_routine()
 
   //destroy from here free(blockchain->genesis);
   //free(connected_node);
+  printf("Closing node_handler\n");
   for (i_fd = 0; i_fd <= max_fd; i_fd++)
+  { 
     if (fd_open[i_fd])
+    {
+      printf("Closing fd_open[i_fd]: %d", fd_open[i_fd]);
       close(fd_open[i_fd]);
+    }
+  }
 
+  free(fd_open);
+
+  pthread_kill(fifotid, SIGINT);
+  
   //for(int j=0; j < tid_index;  j++)
-  //  pthread_join(tid[j], NULL);
+  //  pthread_kill(tid[j], SIGINT);
 
   pthread_mutex_destroy(&mtx_tree);
 

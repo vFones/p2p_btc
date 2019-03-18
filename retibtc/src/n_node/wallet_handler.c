@@ -54,14 +54,18 @@ void w_routine()
   setsockopt(list_fd, SOL_SOCKET, SO_REUSEADDR, &opt_value, sizeof(int));
 
   //sig_action
+  memset (&sig_act, 0, sizeof(sig_act));
   sig_act.sa_handler = sig_handler;
   sig_act.sa_flags = 0;
 
   sigset_t new_mask, old_mask;
-  sigemptyset(&sig_act.sa_mask);
+
   sigaction(SIGINT, &sig_act, NULL);
+  
+  sigemptyset(&new_mask);
   sigaddset(&new_mask, SIGINT);
-  sigprocmask(SIG_SETMASK, NULL, &old_mask);
+  
+  sigprocmask(SIG_SETMASK, &new_mask, &old_mask);
 
   //opening fifo
   fifo_fd = open(FIFOPATH, O_RDWR);
@@ -98,10 +102,8 @@ void w_routine()
     sigprocmask(SIG_BLOCK, &new_mask, NULL);
 
     if(exit_flag == 1)
-    {
-      exit_flag = 0;
       break;
-    }
+
     FD_ZERO(&fdset);
     FD_SET(list_fd, &fdset);
     //re update fdset with fd_open monitor table
@@ -124,6 +126,9 @@ void w_routine()
       perror("select error");
       exit(1);
     }
+
+    if(exit_flag == 1)
+      break;
 
     sigprocmask(SIG_UNBLOCK, &new_mask, NULL);
     // exit critic section unlocking signal
@@ -207,13 +212,22 @@ void w_routine()
       }
     }
   }
+  printf("Reached end of life wallet_handl \n");
   //free(connected_wallet);
   for (i_fd = 0; i_fd <= max_fd; i_fd++)
+  {
     if (fd_open[i_fd])
+    {
+      printf("closing fd_open[i_fd]: %d", fd_open[i_fd]);
       close(fd_open[i_fd]);
+    }
+  }
+
+  free(fd_open);
 
   //for(int j=0; j < tid_index;  j++)
-  //  pthread_join(tid[j], NULL);
+  //  if(pthread_kill(tid[j], SIGINT))
+  //    perror("Pthread_kill");
 
   pthread_mutex_destroy(&mtx_tree);
 
