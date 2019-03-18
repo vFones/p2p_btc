@@ -23,7 +23,7 @@ struct transaction fillTransaction(
   float amount );
 
 int sendTrns(int fd, struct transaction trns);
-int recvTrns(int fd, struct transaction trns);
+int recvTrns(int fd, struct transaction *trns);
 
 
 #endif

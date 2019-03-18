@@ -27,9 +27,10 @@ int sendTrns(int fd, struct transaction trns)
 }
 
 
-int recvTrns(int fd, struct transaction trns)
+int recvTrns(int fd, struct transaction *trns)
 {
-  if(Read(fd, &trns, sizeof(trns)) != 0)
+  memset(&trns, 0, sizeof(trns));
+  if(Read(fd, trns, sizeof(trns)) != 0)
   {
     perror("recvTrns");
     return -1;

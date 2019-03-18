@@ -29,7 +29,7 @@ ssize_t Read(int fd, void *buff, size_t count)
 
 
 
-ssize_t Write(int fd, const void *buf, size_t count)
+ssize_t Write(int fd, const void *buff, size_t count)
 {
   size_t nleft;
   ssize_t nwritten;
@@ -37,7 +37,7 @@ ssize_t Write(int fd, const void *buf, size_t count)
   nleft = count;
   while (nleft > 0)
   {
-    if( (nwritten = write(fd, buf, nleft)) < 0)
+    if( (nwritten = write(fd, buff, nleft)) < 0)
     {
       if(errno == EINTR)
         continue;
@@ -47,7 +47,7 @@ ssize_t Write(int fd, const void *buf, size_t count)
     }
 
     /*if you are here, you have actually write bytes*/
-    buf = (char*)buf + nwritten; /* set pointer */
+    buff = (char*)buff + nwritten; /* set pointer */
     nleft -= nwritten;/* set left to write */
   }
   return nleft;
@@ -70,13 +70,13 @@ int sendInt(int fd, int n)
 
 int recvInt(int fd, int *n)
 {
-  char buf[16];
-  if( Read(fd, buf, 16) != 0)
+  char buff[16];
+  if( Read(fd, buff, 16) != 0)
   {
     perror("recInt");
     return -1;
   }
-  sscanf(buf, "%d", n);
+  sscanf(buff, "%d", n);
   return 0;
 }
 
