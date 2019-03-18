@@ -38,7 +38,7 @@ static void create_transaction(int choice)
             trns = fillTransaction(wallet_info, *(new_conn.node), cryptocurrecy);
 
             sendInt(node_info.fd, TRANSACTION);
-            sendTrns(node_info.fd, trns);
+            Write(node_info.fd, &trns, sizeof(trns));
             printf("\nwait confirm from peer\n");
             recvInt(node_info.fd, &confirm);
 
@@ -61,8 +61,13 @@ static void create_transaction(int choice)
 
       trns = fillTransaction(wallet_info, wallet_info, cryptocurrecy);
 
+      printf("Source: %s:%hu -> Destination: %s:%hu\n", trns.src.address, trns.src.port, trns.dst.address, trns.dst.port);
+      printf("%.2f, %d",trns.amount, trns.random);
+
+
       sendInt(node_info.fd, TRANSACTION);
-      sendTrns(node_info.fd, trns);
+      Write(node_info.fd, &trns, sizeof(trns));
+      //sendTrns(node_info.fd, trns);
 
       printf("\nwait confirm from peer\n");
       recvInt(node_info.fd, &confirm);
