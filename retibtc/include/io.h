@@ -14,11 +14,7 @@ ssize_t Write(int fd, const void *buf, size_t count);
 int sendInt(int fd, int n);
 int recvInt(int fd, int *n);
 
-int sendChar(int fd, char n);
-int recvChar(int fd, char *n);
 
-int sendBlock(int fd, Block b);
-int recvBlock(int fd, Block b);
 
 
 #endif

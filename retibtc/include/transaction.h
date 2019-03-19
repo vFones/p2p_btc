@@ -7,7 +7,8 @@
 enum node_macro{
   TRANSACTION,
   NODE_CONNECTION,
-  WALLET_CONNECTION
+  WALLET_CONNECTION,
+  BLOCK_SPREAD
 };
 
 struct transaction{

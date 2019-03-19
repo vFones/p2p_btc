@@ -1,7 +1,9 @@
 #ifndef BLOCKCHAIN_H
 #define BLOCKCHAIN_H
 
+#include "io.h"
 #include "tree.h"
+#include "transaction.h"
 #include <openssl/sha.h>
 
 struct block{
@@ -31,6 +33,8 @@ char *getLatestSHA256(Blockchain blockchain);
 
 Block searchByLevel(Blockchain blockchain, int level);
 
+int sendBlock(int fd, Block b);
+int recvBlock(int fd, Block b);
 
 
 #endif

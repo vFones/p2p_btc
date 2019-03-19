@@ -1,7 +1,5 @@
 #include "n_node.h"
 
-
-
 int main(int argc, char **argv)
 {
   int opt;
@@ -28,16 +26,16 @@ int main(int argc, char **argv)
   // pthread_mutexattr_setpshared(&mtx_fd_attr, PTHREAD_PROCESS_SHARED);
   // pthread_mutex_init(&mtx_fd, &mtx_fd_attr);
 
-  //initialized just to silent warning..
-
-
-
-  exit_flag = 0;
-  sig_act.sa_handler = sig_handler;
-  sig_act.sa_flags = 0;
-  sigaction(SIGINT, &sig_act, NULL);
-  sigaction(SIGCHLD, &sig_act, NULL);
-
-
   n_routine();
+
+}
+
+
+void sig_handler(int sig_no)
+{
+  if(sig_no == SIGINT)
+  {
+    printf("\nCaptured C-c, closing [%d].\n", getpid());
+    exit_flag = 1;
+  }
 }

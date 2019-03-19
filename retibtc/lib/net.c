@@ -28,7 +28,7 @@ struct connected_node getsockNode(int fd)
   if(getsockname(fd, (struct sockaddr *) &tmpaddr, &lentmpaddr) == -1)
   {
     perror("getsockname -> Node:");
-    return node;
+    exit(EXIT_FAILURE);
   }
   strncpy(node.address, inet_ntoa(tmpaddr.sin_addr), LEN_ADDRESS);
   node.port = ntohs(tmpaddr.sin_port);
@@ -94,7 +94,6 @@ bool compare_by_fd(void *x, void *y)
 
 struct confirm_new_node choose_node()
 {
-  //char buffer[256];
   char buffer[BUFFLEN];
   struct confirm_new_node new_node;
 

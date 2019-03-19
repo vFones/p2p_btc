@@ -80,50 +80,7 @@ int recvInt(int fd, int *n)
   return 0;
 }
 
-int sendChar(int fd, char n)
-{
-  if( Write(fd, (void *)&n, 1) != 0 )
-  {
-    perror("sendChar");
-    return -1;
-  }
-  return 0;
-}
-
-int recvChar(int fd, char *n)
-{
-  if( Read(fd, n, 1) != 0)
-  {
-    perror("recChar");
-    return -1;
-  }
-  return 0;
-}
 
 
-int sendBlock(int fd, Block b)
-{
-  if(Write(fd, b, BLOCK_SIZE) != 0)
-  {
-    perror("sendBlock");
-    return -1;
-  }
-  sendTrns(fd, (Trns)b->info);
-
-  return 0;
-}
 
 
-int recvBlock(int fd, Block b)
-{
-  Trns trns = (Trns)Malloc(TRNS_SIZE);
-  if(Read(fd, b, BLOCK_SIZE) != 0)
-  {
-    perror("sendBlock");
-    return -1;
-  }
-  recvTrns(fd, trns);
-  b->info = trns;
-
-  return 0;
-}

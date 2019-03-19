@@ -1,13 +1,13 @@
 #include "w_node.h"
 
 
-//make a fake transaction, sending src and dst eguals to me.
+//make a fake transaction sending src and dst eguals to me when 'mining'
 static void create_transaction(int choice)
 {
   float cryptocurrecy = 0.0;
   char buffer[32], c = 'n';
   int confirm = 0;
-  Trns trns = (Trns) Malloc(TRNS_SIZE);
+  Trns trns = NULL;
 
   switch(choice)
   {
@@ -66,7 +66,7 @@ static void create_transaction(int choice)
 
 
       sendInt(node_info.fd, TRANSACTION);
-      //Write(node_info.fd, &trns, sizeof(trns));
+
       sendTrns(node_info.fd, trns);
 
       printf("\nwait confirm from peer\n");
@@ -80,15 +80,14 @@ static void create_transaction(int choice)
         wallet_amount += cryptocurrecy;
       }
       break;
-
-    default:
-      //never reached
-      break;
+      //default never reached
   }
-
-
 }
 
+
+//TODO: static void receive_transaction()
+// when receiving a transaction add new amount to mine
+// printing
 
 static void menu_case(int choice)
 {
@@ -106,7 +105,6 @@ static void menu_case(int choice)
     case 5:
       printf("Cleaning and exiting\n");
       exit(EXIT_SUCCESS);
-      break;
     default:
       fprintf(stderr, "Choice is not processed, retry\n");
       break;
@@ -170,9 +168,9 @@ void wallet_routine()
     ***************************/
   	if (FD_ISSET(node_info.fd, &fset))
     {
-      int error;
+      int error = recvInt(node_info.fd, &request);
 
-      if((error = recvInt(node_info.fd, &request)))
+      if(error)
       {
         close(node_info.fd);
         exit(EXIT_FAILURE);
@@ -182,7 +180,7 @@ void wallet_routine()
         switch(request)
         {
           case TRANSACTION:
-            //receive_transaction();
+            //TODO: receive_transaction();
             break;
 
           default:

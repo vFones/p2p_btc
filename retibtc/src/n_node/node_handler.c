@@ -5,6 +5,72 @@ Blockchain blockchain;
 
 static pthread_mutex_t mtx_tree;
 
+//TODO: move file in a pragmatic way
+
+//TODO: CLEAN printf
+
+//TODO: SINCRONIZATION FD AND BLOCKCHAIN
+
+/********************
+   BLOCKCHAIN UTILS
+ ********************/
+void visitBlock(void *arg)
+{
+  if(arg == NULL)
+    return;
+  Block b = (Block)arg;
+  if(!b->n_block)
+    printf("Block[GENESIS]\n");
+  else
+  {
+    Trns trns = b->info;
+    printf("block[%d]\t [%s:%hu -> %s:%hu] [%0.2f BTC] [%d] \n", \
+      b->n_block, trns->src.address, trns->src.port, \
+      trns->dst.address, trns->dst.port, trns->amount, trns->random);
+  }
+}
+
+
+static Block create_block(Trns trns)
+{
+  Block b = (Block)Malloc(BLOCK_SIZE);
+  b->info = trns;
+  b->n_block = blockchain->b_size+1;
+  b->randomtime = 5+(rand()%11);
+
+  b->prev_SHA256 = getLatestSHA256(blockchain);
+
+  // calculate hash of new block
+  unsigned char *tmpb_infoSHA256 = (unsigned char *)Malloc(SHA256_DIGEST_LENGTH);
+  SHA256(b->info, sizeof(b->info), tmpb_infoSHA256);
+
+  //create a string with previous hash + new tmp hash
+  char *tmpSHA256 = (char*)Malloc(SHA256_DIGEST_LENGTH * 2 + 2);
+
+  strncpy(tmpSHA256, b->prev_SHA256, SHA256_DIGEST_LENGTH);
+  strncpy(&tmpSHA256[SHA256_DIGEST_LENGTH], (char *)tmpb_infoSHA256, SHA256_DIGEST_LENGTH);
+  tmpSHA256[SHA256_DIGEST_LENGTH*2 + 1] = '\0';
+  free(tmpb_infoSHA256);
+
+  // calculate hash of new string just created and assign to block
+  unsigned char *hash = (unsigned char *)Malloc(SHA256_DIGEST_LENGTH);
+  SHA256((unsigned char *)tmpSHA256, strlen(tmpSHA256), hash);
+  free(tmpSHA256);
+
+  b->SHA256 = (char *)Malloc(SHA256_DIGEST_LENGTH*2);
+
+  for(int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+    sprintf(&b->SHA256[i*2], "%02x", hash[i]);
+  printf("\n");
+
+  printf("Created block\n");
+
+  return b;
+}
+
+
+
+
 /***********************
   STDIN MENU FUNCTIONS
 ************************/
@@ -55,6 +121,8 @@ static void connect_to_network()
             printf("Receiving %d-st block\n", diff);
             recvBlock(fd, b);
             addBlockToBlockchain(blockchain, b);
+            //TODO: sending block while receiving new one
+            //spread_block();
             diff--;
           }
         }
@@ -70,8 +138,6 @@ static void connect_to_network()
             //search by level in tree
             b = searchByLevel(blockchain, level);
             sendBlock(fd, b);
-            //struct blockchain block = search_in_tree(blockchain, level)
-            //send block
             level++;
           }
         }
@@ -201,6 +267,8 @@ static void* node_connection(void* arg)
       {
         recvBlock(fd, b);
         addBlockToBlockchain(blockchain, b);
+        //TODO: sending block while receiving new one
+        //spread_block();
         diff--;
       }
       //send last block since his got same size as me
@@ -219,61 +287,6 @@ static void* node_connection(void* arg)
   visitConnectedNode(n);
 
   pthread_exit(NULL);
-}
-
-
-void visitBlock(void *arg)
-{
-  if(arg == NULL)
-    return;
-  Block b = (Block)arg;
-  if(!b->n_block)
-    printf("Block[GENESIS]\n");
-  else
-  {
-    Trns trns = b->info;
-    printf("block[%d]\t [%s:%hu -> %s:%hu] [%0.2f BTC] [%d] \n", \
-      b->n_block, trns->src.address, trns->src.port, \
-      trns->dst.address, trns->dst.port, trns->amount, trns->random);
-  }
-}
-
-
-static Block create_block(Trns trns)
-{
-  Block b = (Block)Malloc(BLOCK_SIZE);
-  b->info = trns;
-  b->n_block = blockchain->b_size+1;
-  b->randomtime = 5+(rand()%11);
-
-  b->prev_SHA256 = getLatestSHA256(blockchain);
-
-  // calculate hash of new block
-  unsigned char *tmpb_infoSHA256 = (unsigned char *)Malloc(SHA256_DIGEST_LENGTH);
-  SHA256(b->info, sizeof(b->info), tmpb_infoSHA256);
-
-  //create a string with previous hash + new tmp hash
-  char *tmpSHA256 = (char*)Malloc(SHA256_DIGEST_LENGTH * 2 + 2);
-
-  strncpy(tmpSHA256, b->prev_SHA256, SHA256_DIGEST_LENGTH);
-  strncpy(&tmpSHA256[SHA256_DIGEST_LENGTH], (char *)tmpb_infoSHA256, SHA256_DIGEST_LENGTH);
-  tmpSHA256[SHA256_DIGEST_LENGTH*2 + 1] = '\0';
-  free(tmpb_infoSHA256);
-
-  // calculate hash of new string just created and assign to block
-  unsigned char *hash = (unsigned char *)Malloc(SHA256_DIGEST_LENGTH);
-  SHA256((unsigned char *)tmpSHA256, strlen(tmpSHA256), hash);
-  free(tmpSHA256);
-
-  b->SHA256 = (char *)Malloc(SHA256_DIGEST_LENGTH*2);
-
-  for(int i = 0; i < SHA256_DIGEST_LENGTH; i++)
-    sprintf(&b->SHA256[i*2], "%02x", hash[i]);
-  printf("\n");
-
-  printf("Created block\n");
-
-  return b;
 }
 
 
@@ -305,26 +318,19 @@ static void* receive_transaction(void *arg)
   Trns trns = (Trns)Malloc(TRNS_SIZE);
 
   // receiv transaction from w_node
-
   recvTrns(fd, trns);
-
-  sendInt(fd, 1);
-
   printf("package from %s:%hu\n", trns->src.address, trns->src.port);
+  // send confirm
+  sendInt(fd, 1);
 
   //creating block with transaction
   Block b = create_block(trns);
 
   //waiting rand sec
   printf("Waiting %d sec \n", b->randomtime);
-  printf("prev_sha: %s\n",b->prev_SHA256);
-  printf("sha: %s\n", b->SHA256);
   sleep((unsigned int)b->randomtime);
 
   printf("Block[%d]\n",b->n_block);
-  //for(int i = 0; i < SHA256_DIGEST_LENGTH; i++)
-    //printf("%02x", b.prev_SHA256[i]);
-
 
   //if created block is with already old(received another block)
   while(b->n_block <= blockchain->b_size)
@@ -332,14 +338,24 @@ static void* receive_transaction(void *arg)
     printf("Recreating block\n");
     free(b);
     b = create_block(trns);
-  }
-    //recreate
+  }//recreate
 
   addBlockToBlockchain(blockchain, b);
   printf("Added to blockchain\n");
 
-  //visitBlock(b);
 
+  //spread_block();
+  pthread_exit(NULL);
+}
+
+static void *receive_block(void *arg)
+{
+  int fd = *(int *)arg;
+  //TODO: receive macro BLOCK_SPREAD
+  // received from a thread (TODO: create function spread_block(Block, connected_node, connected_wallet))
+  //send to everyone exept the one who sended to me (control via fd)
+  //send to the wallet if connected to me
+  //fin(?)
   pthread_exit(NULL);
 }
 
@@ -553,14 +569,11 @@ void n_routine()
           case TRANSACTION:
             pthread_create(&tid[tid_index], NULL, receive_transaction, (void *)tid_args[tid_index]);
             break;
-            /*
-            case RECV_TRNS:
-              receive_transaction();
-              break;
-            */
+          case BLOCK_SPREAD:
+            pthread_create(&tid[tid_index], NULL, receive_block, (void *)tid_args[tid_index]);
+            break;
           default:
             fprintf(stderr, "Node: request received is not correct\n");
-            //print_menu();
             break;
         }
         tid_index++;
@@ -568,8 +581,6 @@ void n_routine()
     }
   }
 
-  //destroy from here free(blockchain->genesis);
-  //free(connected_node);
   printf("Closing node_handler\n");
   for (i_fd = 0; i_fd <= max_fd; i_fd++)
   {
@@ -582,19 +593,10 @@ void n_routine()
 
   free(fd_open);
 
-  //for(int j=0; j < tid_index;  j++)
-  //  pthread_join(tid[j], NULL);
+  for(int j=0; j < tid_index;  j++)
+    pthread_kill(tid[j], SIGKILL);
 
   pthread_mutex_destroy(&mtx_tree);
 
   exit(EXIT_SUCCESS);
-}
-
-void sig_handler(int sig_no)
-{
-  if(sig_no == SIGINT)
-  {
-    printf("\nCaptured C-c, closing [%d].\n", getpid());
-    exit_flag = 1;
-  }
 }

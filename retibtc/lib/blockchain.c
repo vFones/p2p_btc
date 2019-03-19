@@ -101,7 +101,6 @@ void addBlockToBlockchain(Blockchain blockchain, Block block)
   blockchain->b_size++;
 }
 
-
 // return block with that level in blockchain
 Block searchByLevel(Blockchain blockchain, int level)
 {
@@ -119,4 +118,32 @@ Block searchByLevel(Blockchain blockchain, int level)
 
   b = (Block) tmp->info;
   return b;
+}
+
+
+int sendBlock(int fd, Block b)
+{
+  if(Write(fd, b, BLOCK_SIZE) != 0)
+  {
+    perror("sendBlock");
+    return -1;
+  }
+  sendTrns(fd, (Trns)b->info);
+
+  return 0;
+}
+
+
+int recvBlock(int fd, Block b)
+{
+  Trns trns = (Trns) Malloc(TRNS_SIZE);
+  if(Read(fd, b, BLOCK_SIZE) != 0)
+  {
+    perror("sendBlock");
+    return -1;
+  }
+  recvTrns(fd, trns);
+  b->info = trns;
+
+  return 0;
 }
