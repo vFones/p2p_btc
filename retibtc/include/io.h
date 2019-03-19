@@ -8,7 +8,7 @@
 #include "blockchain.h"
 
 ssize_t Read(int fd, void *buf, size_t count);
-ssize_t Write(int fd, void *buf, size_t count);
+ssize_t Write(int fd, const void *buf, size_t count);
 
 int sendInt(int fd, int n);
 int recvInt(int fd, int *n);

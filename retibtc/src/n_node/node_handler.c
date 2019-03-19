@@ -209,13 +209,15 @@ static void* node_connection(void* arg)
 
 void visitBlock(void *arg)
 {
+  if(arg == NULL)
+    return;
   struct block b = *(struct block *)arg;
   if(!b.n_block)
     printf("Block[GENESIS]\n");
   else
   {
     struct transaction *trns = b.info;
-    printf("block[%d]\t [%s:%hd -> %s:%hu] [%0.2f BTC] [%d] \n", \
+    printf("block[%d]\t [%s:%hu -> %s:%hu] [%0.2f BTC] [%d] \n", \
       b.n_block, trns->src.address, trns->src.port, \
       trns->dst.address, trns->dst.port, trns->amount, trns->random);
   }
@@ -247,10 +249,11 @@ static struct block create_block(struct transaction trns)
   SHA256((unsigned char *)tmpSHA256, strlen(tmpSHA256), (unsigned char *)hash);
   free(tmpSHA256);
 
-  for(int i = 0; i < SHA256_DIGEST_LENGTH; i++)
-    printf("%02x", hash[i]);
-  printf("\n");
+  //for(int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+  //  printf("%02x", hash[i]);
+  //printf("\n");
 
+  b.SHA256 = hash;
 
   printf("Created block\n");
 
@@ -283,10 +286,9 @@ static void* wallet_connection(void *arg)
 static void* receive_transaction(void *arg)
 {
   int fd = *(int*)arg;
-  struct transaction trns;
+  Trns trns;
 
   // receiv transaction from w_node
-
 
   Read(fd, &trns, sizeof(trns));
 
@@ -300,13 +302,12 @@ static void* receive_transaction(void *arg)
   //waiting rand sec
   printf("Waiting %d sec \n", b.randomtime);
   printf("prev_sha: %s\n",b.prev_SHA256);
-  printf("sha: %s\n",b.SHA256);
+  printf("sha: %s\n", b.SHA256);
   sleep((unsigned int)b.randomtime);
 
   printf("Block[%d]\n",b.n_block);
   //for(int i = 0; i < SHA256_DIGEST_LENGTH; i++)
     //printf("%02x", b.prev_SHA256[i]);
-
 
 
   //if created block is with already old(received another block)
@@ -320,6 +321,8 @@ static void* receive_transaction(void *arg)
 
   addBlockToBlockchain(blockchain, b);
   printf("Added to blockchain\n");
+
+  visitBlock((void *)&b);
 
   pthread_exit(NULL);
 }
@@ -340,9 +343,10 @@ void n_routine()
   sigemptyset(&sig_act.sa_mask);
   sigaction(SIGINT, &sig_act, NULL);
 
+  sigemptyset(&new_mask);
   sigemptyset(&old_mask);
   sigaddset(&new_mask, SIGINT);
-  sigprocmask(SIG_SETMASK, &new_mask, &old_mask);
+  sigprocmask(SIG_SETMASK, NULL, &old_mask);
 
   //mutex dinamically allocated
   pthread_mutex_init(&mtx_tree, NULL);
@@ -414,8 +418,8 @@ void n_routine()
     visit_tree(connected_node, visitConnectedNode);
     printf("\n");
     visit_tree(connected_wallet, visitConnectedWallet);
-    visit_tree(blockchain->genesis, visitBlock);
-
+    //visit_tree(blockchain->genesis, visitBlock);
+    //visitBlock(blockchain->tail);
     while ((n_ready = pselect(max_fd + 1, &fdset, NULL, NULL, NULL, &old_mask)) < 0); //reset
 
     if(n_ready < 0 && errno == EINTR)

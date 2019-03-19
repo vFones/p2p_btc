@@ -15,6 +15,7 @@ struct transaction{
   float amount;
   int random;
 };
+typedef struct transaction *trns Trsn;
 #define TRNS_SIZE sizeof(struct transaction);
 
 struct transaction fillTransaction(

@@ -29,7 +29,7 @@ ssize_t Read(int fd, void *buff, size_t count)
 
 
 
-ssize_t Write(int fd, void *buff, size_t count)
+ssize_t Write(int fd, const void *buff, size_t count)
 {
   size_t nleft;
   ssize_t nwritten;
