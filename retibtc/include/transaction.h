@@ -15,16 +15,16 @@ struct transaction{
   float amount;
   int random;
 };
-typedef struct transaction *trns Trsn;
-#define TRNS_SIZE sizeof(struct transaction);
+typedef struct transaction* Trns;
+#define TRNS_SIZE sizeof(struct transaction)
 
 struct transaction fillTransaction(
   struct connected_node src, \
   struct connected_node dst, \
   float amount );
 
-int sendTrns(int fd, struct transaction trns);
-int recvTrns(int fd, struct transaction trns);
+int sendTrns(int fd, Trns trns);
+int recvTrns(int fd, Trns trns);
 
 
 #endif

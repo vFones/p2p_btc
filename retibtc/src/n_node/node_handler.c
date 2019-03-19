@@ -50,8 +50,8 @@ static void connect_to_network()
 
           while(diff != 0)
           {
-            struct block b;
-            recvBlock(fd, &b);
+            Block b = (Block)Malloc(BLOCK_SIZE);
+            recvBlock(fd, b);
             addBlockToBlockchain(blockchain, b);
             diff--;
           }
@@ -66,8 +66,8 @@ static void connect_to_network()
           while(level < blockchain->b_size)
           {
             //search by level in tree
-            struct block b = searchByLevel(blockchain, level);
-            sendBlock(fd, &b);
+            Block b = searchByLevel(blockchain, level);
+            sendBlock(fd, b);
             //struct blockchain block = search_in_tree(blockchain, level)
             //send block
             level++;
@@ -175,16 +175,16 @@ static void* node_connection(void* arg)
       // e.g.: blockchain_size = 15, bsize_n = 3, level to search in tree is 12
       while (level < blockchain->b_size) {
         //search by level in tree
-        struct block b = searchByLevel(blockchain, level);
-        sendBlock(fd, &b);
+        Block b = searchByLevel(blockchain, level);
+        sendBlock(fd, b);
         level++;
       }
     } else //received negative number
     {
       int diff = abs(bsize_n);
       while (diff != 0) {
-        struct block b;
-        recvBlock(n->fd, &b);
+        Block b = (Block)Malloc(BLOCK_SIZE);
+        recvBlock(n->fd, b);
         addBlockToBlockchain(blockchain, b);
         diff--;
       }
@@ -211,35 +211,36 @@ void visitBlock(void *arg)
 {
   if(arg == NULL)
     return;
-  struct block b = *(struct block *)arg;
-  if(!b.n_block)
+  Block b = (Block)arg;
+  if(!b->n_block)
     printf("Block[GENESIS]\n");
   else
   {
-    struct transaction *trns = b.info;
+    Trns trns = b->info;
     printf("block[%d]\t [%s:%hu -> %s:%hu] [%0.2f BTC] [%d] \n", \
-      b.n_block, trns->src.address, trns->src.port, \
+      b->n_block, trns->src.address, trns->src.port, \
       trns->dst.address, trns->dst.port, trns->amount, trns->random);
   }
 }
 
-static struct block create_block(struct transaction trns)
-{
-  struct block b;
-  b.info = &trns;
-  b.n_block = blockchain->b_size+1;
-  b.randomtime = 5+(rand()%11);
 
-  b.prev_SHA256 = getLatestSHA256(blockchain);
+static Block create_block(Trns trns)
+{
+  Block b = (Block)Malloc(BLOCK_SIZE);
+  b->info = trns;
+  b->n_block = blockchain->b_size+1;
+  b->randomtime = 5+(rand()%11);
+
+  b->prev_SHA256 = getLatestSHA256(blockchain);
 
   // calculate hash of new block
   unsigned char *tmpb_infoSHA256 = (unsigned char *)Malloc(SHA256_DIGEST_LENGTH);
-  SHA256(b.info, sizeof(b.info), tmpb_infoSHA256);
+  SHA256(b->info, sizeof(b->info), tmpb_infoSHA256);
 
   //create a string with previous hash + new tmp hash
   char *tmpSHA256 = (char*)Malloc(SHA256_DIGEST_LENGTH * 2 + 2);
 
-  strncpy(tmpSHA256, b.prev_SHA256, SHA256_DIGEST_LENGTH);
+  strncpy(tmpSHA256, b->prev_SHA256, SHA256_DIGEST_LENGTH);
   strncpy(&tmpSHA256[SHA256_DIGEST_LENGTH], (char *)tmpb_infoSHA256, SHA256_DIGEST_LENGTH);
   tmpSHA256[SHA256_DIGEST_LENGTH*2 + 1] = '\0';
   free(tmpb_infoSHA256);
@@ -253,7 +254,7 @@ static struct block create_block(struct transaction trns)
   //  printf("%02x", hash[i]);
   //printf("\n");
 
-  b.SHA256 = hash;
+  b->SHA256 = hash;
 
   printf("Created block\n");
 
@@ -286,35 +287,35 @@ static void* wallet_connection(void *arg)
 static void* receive_transaction(void *arg)
 {
   int fd = *(int*)arg;
-  Trns trns;
+  Trns trns = (Trns)Malloc(TRNS_SIZE);
 
   // receiv transaction from w_node
 
-  Read(fd, &trns, sizeof(trns));
+  recvTrns(fd, trns);
 
   sendInt(fd, 1);
 
-  printf("package from %s:%hu\n", trns.src.address, trns.src.port);
+  printf("package from %s:%hu\n", trns->src.address, trns->src.port);
 
   //creating block with transaction
-  struct block b = create_block(trns);
+  Block b = create_block(trns);
 
   //waiting rand sec
-  printf("Waiting %d sec \n", b.randomtime);
-  printf("prev_sha: %s\n",b.prev_SHA256);
-  printf("sha: %s\n", b.SHA256);
-  sleep((unsigned int)b.randomtime);
+  printf("Waiting %d sec \n", b->randomtime);
+  printf("prev_sha: %s\n",b->prev_SHA256);
+  printf("sha: %s\n", b->SHA256);
+  sleep((unsigned int)b->randomtime);
 
-  printf("Block[%d]\n",b.n_block);
+  printf("Block[%d]\n",b->n_block);
   //for(int i = 0; i < SHA256_DIGEST_LENGTH; i++)
     //printf("%02x", b.prev_SHA256[i]);
 
 
   //if created block is with already old(received another block)
-  while(b.n_block <= blockchain->b_size)
+  while(b->n_block <= blockchain->b_size)
   {
     printf("Recreating block\n");
-    memset(&b, 0, sizeof(struct block));
+    free(b);
     b = create_block(trns);
   }
     //recreate
@@ -322,7 +323,7 @@ static void* receive_transaction(void *arg)
   addBlockToBlockchain(blockchain, b);
   printf("Added to blockchain\n");
 
-  visitBlock((void *)&b);
+  //visitBlock(b);
 
   pthread_exit(NULL);
 }
@@ -418,8 +419,8 @@ void n_routine()
     visit_tree(connected_node, visitConnectedNode);
     printf("\n");
     visit_tree(connected_wallet, visitConnectedWallet);
-    //visit_tree(blockchain->genesis, visitBlock);
-    //visitBlock(blockchain->tail);
+    visit_tree(blockchain->genesis, visitBlock);
+
     while ((n_ready = pselect(max_fd + 1, &fdset, NULL, NULL, NULL, &old_mask)) < 0); //reset
 
     if(n_ready < 0 && errno == EINTR)

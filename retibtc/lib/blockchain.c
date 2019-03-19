@@ -2,7 +2,7 @@
 
 Blockchain create_blockchain()
 {
-  struct block *gen_block = (Block)Malloc(BLOCK_SIZE);
+  Block gen_block = (Block)Malloc(BLOCK_SIZE);
 
   printf("creating blockchain: genesis\n");
   gen_block->prev_SHA256 = "0000000000000000000000000000000000000000000000000000000000000000";
@@ -24,7 +24,7 @@ Blockchain create_blockchain()
 
 
 //used to get block from a specific node
-struct block getBlockFromNode(Tree node)
+static struct block getBlockFromNode(Tree node)
 {
   struct block b = *(struct block *) node->info;
   return b;
@@ -78,7 +78,7 @@ static Tree max_randtime(Tree node)
 
 
 // add a new block to blockchain checking for multitail
-void addBlockToBlockchain(Blockchain blockchain, struct block block)
+void addBlockToBlockchain(Blockchain blockchain, Block block)
 {
   Tree tmp = blockchain->tail;
   Tree multitail = NULL;
@@ -89,13 +89,13 @@ void addBlockToBlockchain(Blockchain blockchain, struct block block)
 
   if(!has_node_siblings(tmp))
   {
-    new_son = create_kid_to_node(tmp, &block);
+    new_son = create_kid_to_node(tmp, block);
     blockchain->tail = new_son;
   }
   else// there are multitail
   {
     multitail = max_randtime(tmp);
-    new_son = create_kid_to_node(multitail, &block);
+    new_son = create_kid_to_node(multitail, block);
     blockchain->tail = new_son;
   }
   blockchain->b_size++;
@@ -103,10 +103,10 @@ void addBlockToBlockchain(Blockchain blockchain, struct block block)
 
 
 // return block with that level in blockchain
-struct block searchByLevel(Blockchain blockchain, int level)
+Block searchByLevel(Blockchain blockchain, int level)
 {
   Tree tmp = blockchain->genesis->kids;
-  struct block b;
+  Block b = (Block)Malloc(BLOCK_SIZE);
   int i = 0;
 
   while (tmp->kids != NULL || i < level)
@@ -117,6 +117,6 @@ struct block searchByLevel(Blockchain blockchain, int level)
   if (has_node_siblings(tmp))
     tmp = max_randtime(tmp);
 
-  b = *(struct block *)(tmp->info);
+  b = (tmp->info);
   return b;
 }

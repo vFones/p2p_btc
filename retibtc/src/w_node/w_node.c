@@ -7,7 +7,7 @@ static void create_transaction(int choice)
   float cryptocurrecy = 0.0;
   char buffer[32], c = 'n';
   int confirm = 0;
-  struct transaction trns;
+  Trns trns = (Trns) Malloc(TRNS_SIZE);
 
   switch(choice)
   {
@@ -35,7 +35,7 @@ static void create_transaction(int choice)
 
           if(c == 'y')
           {
-            trns = fillTransaction(wallet_info, *(new_conn.node), cryptocurrecy);
+            *trns = fillTransaction(wallet_info, *(new_conn.node), cryptocurrecy);
 
             sendInt(node_info.fd, TRANSACTION);
             Write(node_info.fd, &trns, sizeof(trns));
@@ -59,15 +59,15 @@ static void create_transaction(int choice)
       scanf(" %s", buffer);
       cryptocurrecy = strtof(buffer, NULL);
 
-      trns = fillTransaction(wallet_info, wallet_info, cryptocurrecy);
+      *trns = fillTransaction(wallet_info, wallet_info, cryptocurrecy);
 
-      printf("Source: %s:%hu -> Destination: %s:%hu\n", trns.src.address, trns.src.port, trns.dst.address, trns.dst.port);
-      printf("%.2f, %d",trns.amount, trns.random);
+      printf("Source: %s:%hu -> Destination: %s:%hu\n", trns->src.address, trns->src.port, trns->dst.address, trns->dst.port);
+      printf("%.2f, %d",trns->amount, trns->random);
 
 
       sendInt(node_info.fd, TRANSACTION);
-      Write(node_info.fd, &trns, sizeof(trns));
-      //sendTrns(node_info.fd, trns);
+      //Write(node_info.fd, &trns, sizeof(trns));
+      sendTrns(node_info.fd, trns);
 
       printf("\nwait confirm from peer\n");
       recvInt(node_info.fd, &confirm);

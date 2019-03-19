@@ -25,12 +25,11 @@ typedef struct blockchain* Blockchain;
 Blockchain create_blockchain();
 
 //handling multitail
-void addBlockToBlockchain(Blockchain blockchain, struct block block);
+void addBlockToBlockchain(Blockchain blockchain, Block block);
 
-struct block getBlockFromNode(Tree node);
 char *getLatestSHA256(Blockchain blockchain);
 
-struct block searchByLevel(Blockchain blockchain, int level);
+Block searchByLevel(Blockchain blockchain, int level);
 
 
 

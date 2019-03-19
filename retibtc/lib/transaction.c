@@ -16,9 +16,9 @@ struct transaction fillTransaction( struct connected_node src, \
   return trns;
 }
 
-int sendTrns(int fd, struct transaction trns)
+int sendTrns(int fd, Trns trns)
 {
-  if(Write(fd, (void *)&trns, sizeof(trns)) != 0)
+  if(Write(fd, trns, TRNS_SIZE) != 0)
   {
     perror("sendTrns");
     return -1;
@@ -27,9 +27,9 @@ int sendTrns(int fd, struct transaction trns)
 }
 
 
-int recvTrns(int fd, struct transaction trns)
+int recvTrns(int fd, Trns trns)
 {
-  if(Read(fd, &trns, sizeof(trns)) != 0)
+  if(Read(fd, trns, TRNS_SIZE) != 0)
   {
     perror("recvTrns");
     return -1;
