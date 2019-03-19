@@ -9,7 +9,6 @@
 #include <string.h>
 #include <stdbool.h>
 
-#include "io.h"
 #include "utils.h"
 
 #define LEN_ADDRESS 32

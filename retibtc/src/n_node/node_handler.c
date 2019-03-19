@@ -352,6 +352,7 @@ void n_routine()
   srand(time(NULL));
 
   //sig_action
+
   sig_act.sa_handler = sig_handler;
   sig_act.sa_flags = 0;
 
@@ -436,7 +437,7 @@ void n_routine()
     visit_tree(connected_wallet, visitConnectedWallet);
     visit_tree(blockchain->genesis, visitBlock);
 
-    while ((n_ready = pselect(max_fd + 1, &fdset, NULL, NULL, NULL, &old_mask)) < 0); //reset
+    n_ready = pselect(max_fd + 1, &fdset, NULL, NULL, NULL, &old_mask); //reset
 
     if(n_ready < 0 && errno == EINTR)
     {
@@ -451,8 +452,6 @@ void n_routine()
       exit(1);
     }
 
-    if(exit_flag == 1)
-      break;
 
     sigprocmask(SIG_UNBLOCK, &new_mask, NULL);
     // exit critic section unlocking signal
@@ -464,7 +463,6 @@ void n_routine()
     if(FD_ISSET(STDIN_FILENO, &fdset))
     {
       n_ready--;
-      fflush(stdin);
       fgets(line_buffer, 16, stdin);
       choice = atoi(line_buffer);
       menu_case(choice);
@@ -474,6 +472,7 @@ void n_routine()
     /***************************
         Socket connections
     ***************************/
+
     if(FD_ISSET(list_fd, &fdset))
     {
       n_ready--; //accepting after new connection

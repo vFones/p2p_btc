@@ -1,6 +1,7 @@
 #ifndef TRANSACTION_H
 #define TRANSACTION_H
 
+#include "io.h"
 #include "net.h"
 
 enum node_macro{

@@ -116,11 +116,14 @@ int sendBlock(int fd, Block b)
 
 int recvBlock(int fd, Block b)
 {
+  Trns trns = (Trns)Malloc(TRNS_SIZE);
   if(Read(fd, b, BLOCK_SIZE) != 0)
   {
     perror("sendBlock");
     return -1;
   }
-  recvTrns(fd, (Trns)b->info);
+  recvTrns(fd, trns);
+  b->info = trns;
+
   return 0;
 }
