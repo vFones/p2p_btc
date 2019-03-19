@@ -105,11 +105,11 @@ void addBlockToBlockchain(Blockchain blockchain, Block block)
 // return block with that level in blockchain
 Block searchByLevel(Blockchain blockchain, int level)
 {
-  Tree tmp = blockchain->genesis->kids;
-  Block b = (Block)Malloc(BLOCK_SIZE);
+  Tree tmp = blockchain->genesis;
+  Block b = NULL;
   int i = 0;
 
-  while (tmp->kids != NULL || i < level)
+  while (tmp->kids != NULL || i != level)
   {
     tmp = tmp->kids;
     i++;
@@ -117,6 +117,6 @@ Block searchByLevel(Blockchain blockchain, int level)
   if (has_node_siblings(tmp))
     tmp = max_randtime(tmp);
 
-  b = (tmp->info);
+  b = (Block) tmp->info;
   return b;
 }

@@ -102,7 +102,7 @@ int recvChar(int fd, char *n)
 
 int sendBlock(int fd, Block b)
 {
-  if(Write(fd, (const void *)&b, BLOCK_SIZE) != 0)
+  if(Write(fd, b, BLOCK_SIZE) != 0)
   {
     perror("sendBlock");
     return -1;

@@ -187,10 +187,9 @@ static void* node_connection(void* arg)
         //search by level in tree
         printf("Searchin by level\n");
         b = searchByLevel(blockchain, level);
-        printf("Found this block at level [%d]\n",level);
-        visitBlock(b);
-        printf("Sending block %d\n",level);
         sendBlock(fd, b);
+        printf("Sending block %d\n",level);
+        visitBlock(b);
         printf("Sent block %d\n",level);
         level++;
       }
