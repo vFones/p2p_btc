@@ -61,7 +61,6 @@ void visitConnectedNode(void *args)
 {
   Conn_node n = (Conn_node) args;
   printf("Node = %s:%hu in fd [%d]\n", n->address, n->port, n->fd);
-
 }
 
 

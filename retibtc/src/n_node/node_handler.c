@@ -246,15 +246,15 @@ static Block create_block(Trns trns)
   free(tmpb_infoSHA256);
 
   // calculate hash of new string just created and assign to block
-  char *hash = (char*)Malloc(SHA256_DIGEST_LENGTH);
-  SHA256((unsigned char *)tmpSHA256, strlen(tmpSHA256), (unsigned char *)hash);
+  unsigned char *hash = (unsigned char *)Malloc(SHA256_DIGEST_LENGTH);
+  SHA256((unsigned char *)tmpSHA256, strlen(tmpSHA256), hash);
   free(tmpSHA256);
 
-  //for(int i = 0; i < SHA256_DIGEST_LENGTH; i++)
-  //  printf("%02x", hash[i]);
-  //printf("\n");
+  b->SHA256 = (char *)Malloc(SHA256_DIGEST_LENGTH*2);
 
-  b->SHA256 = hash;
+  for(int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+    sprintf(&b->SHA256[i*2], "%02x", hash[i]);
+  printf("\n");
 
   printf("Created block\n");
 
@@ -405,7 +405,7 @@ void n_routine()
 
     if(exit_flag == 1)
       break;
-    
+
     FD_ZERO(&fdset);
     FD_SET(STDIN_FILENO, &fdset);
     FD_SET(list_fd, &fdset);
@@ -438,7 +438,7 @@ void n_routine()
 
     if(exit_flag == 1)
       break;
-    
+
     sigprocmask(SIG_UNBLOCK, &new_mask, NULL);
     // exit critic section unlocking signal
 
@@ -558,7 +558,7 @@ void n_routine()
   //free(connected_node);
   printf("Closing node_handler\n");
   for (i_fd = 0; i_fd <= max_fd; i_fd++)
-  { 
+  {
     if (fd_open[i_fd])
     {
       printf("Closing fd_open[i_fd]: %d", fd_open[i_fd]);

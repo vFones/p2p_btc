@@ -32,8 +32,8 @@ static struct block getBlockFromNode(Tree node)
 
 char *getLatestSHA256(Blockchain blockchain)
 {
-  struct block *block = NULL;
-  block = (struct block*)blockchain->tail->info;
+  Block block = NULL;
+  block = (Block)blockchain->tail->info;
 
   char *latest = block->SHA256;
   printf("gotLatestSHA256...\n");
