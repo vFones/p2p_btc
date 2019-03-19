@@ -35,7 +35,7 @@ static void create_transaction(int choice)
 
           if(c == 'y')
           {
-            *trns = fillTransaction(wallet_info, *(new_conn.node), cryptocurrecy);
+            trns = fillTransaction(wallet_info, *(new_conn.node), cryptocurrecy);
 
             sendInt(node_info.fd, TRANSACTION);
             Write(node_info.fd, &trns, sizeof(trns));
@@ -59,7 +59,7 @@ static void create_transaction(int choice)
       scanf(" %s", buffer);
       cryptocurrecy = strtof(buffer, NULL);
 
-      *trns = fillTransaction(wallet_info, wallet_info, cryptocurrecy);
+      trns = fillTransaction(wallet_info, wallet_info, cryptocurrecy);
 
       printf("Source: %s:%hu -> Destination: %s:%hu\n", trns->src.address, trns->src.port, trns->dst.address, trns->dst.port);
       printf("%.2f, %d",trns->amount, trns->random);

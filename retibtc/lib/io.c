@@ -100,6 +100,7 @@ int recvChar(int fd, char *n)
   return 0;
 }
 
+
 int sendBlock(int fd, Block b)
 {
   if(Write(fd, b, BLOCK_SIZE) != 0)
@@ -107,8 +108,11 @@ int sendBlock(int fd, Block b)
     perror("sendBlock");
     return -1;
   }
+  sendTrns(fd, (Trns)b->info);
+
   return 0;
 }
+
 
 int recvBlock(int fd, Block b)
 {
@@ -117,5 +121,6 @@ int recvBlock(int fd, Block b)
     perror("sendBlock");
     return -1;
   }
+  recvTrns(fd, (Trns)b->info);
   return 0;
 }

@@ -1,19 +1,19 @@
 #include "../include/transaction.h"
 
-struct transaction fillTransaction( struct connected_node src, \
-                                    struct connected_node dst, float amount )
+Trns fillTransaction( struct connected_node src, \
+                                        struct connected_node dst, float amount )
 {
-  struct transaction trns;
-  strncpy(trns.src.address, src.address, LEN_ADDRESS);
-  trns.src.port = src.port;
+    Trns trns = (Trns)Malloc(TRNS_SIZE);
+    strncpy(trns->src.address, src.address, LEN_ADDRESS);
+    trns->src.port = src.port;
 
-  strncpy(trns.dst.address, dst.address, LEN_ADDRESS);
-  trns.dst.port = dst.port;
+    strncpy(trns->dst.address, dst.address, LEN_ADDRESS);
+    trns->dst.port = dst.port;
 
-  trns.amount = amount;
-  trns.random = rand()%1000;
+    trns->amount = amount;
+    trns->random = rand()%1000;
 
-  return trns;
+    return trns;
 }
 
 int sendTrns(int fd, Trns trns)
