@@ -24,6 +24,8 @@ static void connect_to_network()
     int fd = Socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in tmp;
 
+    Block b = (Block)Malloc(BLOCK_SIZE);
+
     fillAddressIPv4(&tmp, new_conn.node->address ,new_conn.node->port);
     visitConnectedNode(new_conn.node);
 
@@ -33,7 +35,7 @@ static void connect_to_network()
 
       // waiting confirming in response
       recvInt(fd, &bsize_new_conn);
-
+      printf("Size received of his blockchain: %d\n",bsize_new_conn);
       /*************************
        **   SYNC BLOCKCHAIN   **
        ************************/
@@ -41,7 +43,7 @@ static void connect_to_network()
       if(bsize_new_conn)
       {
         int diff = bsize_new_conn - blockchain->b_size;
-
+        printf("Diff = his blockchain size [%d] - blockchain size[%d] = %d\n", bsize_new_conn,blockchain->b_size,diff);
         // if him got more block than me, send to me
         if(bsize_new_conn >= blockchain->b_size)
         {
@@ -50,7 +52,7 @@ static void connect_to_network()
 
           while(diff != 0)
           {
-            Block b = (Block)Malloc(BLOCK_SIZE);
+            printf("Receiving %d-st block\n", diff);
             recvBlock(fd, b);
             addBlockToBlockchain(blockchain, b);
             diff--;
@@ -66,7 +68,7 @@ static void connect_to_network()
           while(level < blockchain->b_size)
           {
             //search by level in tree
-            Block b = searchByLevel(blockchain, level);
+            b = searchByLevel(blockchain, level);
             sendBlock(fd, b);
             //struct blockchain block = search_in_tree(blockchain, level)
             //send block
@@ -81,7 +83,11 @@ static void connect_to_network()
       }
       //response negative
       else
+      {
         printf("Node got 0 block\n");
+        free(b);
+      }
+
 
       fd_open[fd] = 1;
       if(fd > max_fd)
@@ -158,33 +164,43 @@ static void* node_connection(void* arg)
   Conn_node n = NULL;
 
   int bsize_n = 0;
-
+  Block b = (Block)Malloc(BLOCK_SIZE);
   n = getpeerNode(fd);
 
   //sending confirm
-  sendInt(n->fd, blockchain->b_size);
+  sendInt(fd, blockchain->b_size);
+  printf("Sent size of my blockchain: [%d]\n",blockchain->b_size);
 
   //if my blockchain size is 0 don't sync
   if(blockchain->b_size)
   {
-    recvInt(n->fd, &bsize_n);
-
-    if (bsize_n >= 0) {
-      int level = (blockchain->b_size - bsize_n);
+    recvInt(fd, &bsize_n);
+    printf("Received block to send: [%d]\n", bsize_n);
+    if (bsize_n >= 0)
+    {
+      int level = (blockchain->b_size - bsize_n) + 1;
+      printf("Sending block starting from %d-st block of blockchain\n", level);
       // ( blockchain_size - bsize_n  = livello da cui partire a mandare )
-      // e.g.: blockchain_size = 15, bsize_n = 3, level to search in tree is 12
-      while (level < blockchain->b_size) {
+      // e.g.: blockchain_size = 15, bsize_n = 3, level to search in tree is 13
+      while (level <= blockchain->b_size)
+      {
         //search by level in tree
-        Block b = searchByLevel(blockchain, level);
+        printf("Searchin by level\n");
+        b = searchByLevel(blockchain, level);
+        printf("Found this block at level [%d]\n",level);
+        visitBlock(b);
+        printf("Sending block %d\n",level);
         sendBlock(fd, b);
+        printf("Sent block %d\n",level);
         level++;
       }
-    } else //received negative number
+    }
+    else //received negative number
     {
       int diff = abs(bsize_n);
-      while (diff != 0) {
-        Block b = (Block)Malloc(BLOCK_SIZE);
-        recvBlock(n->fd, b);
+      while (diff != 0)
+      {
+        recvBlock(fd, b);
         addBlockToBlockchain(blockchain, b);
         diff--;
       }
