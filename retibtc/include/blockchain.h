@@ -33,6 +33,8 @@ char *getLatestSHA256(Blockchain blockchain);
 
 Block searchByLevel(Blockchain blockchain, int level);
 
+bool compareBlockByInfo(void *x, void *y);
+
 int sendBlock(int fd, Block b);
 int recvBlock(int fd, Block b);
 

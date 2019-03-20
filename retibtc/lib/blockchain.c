@@ -86,10 +86,13 @@ void addBlockToBlockchain(Blockchain blockchain, Block block)
   // if latest node of blockchain got siblings
   // use max_randtime to checkup the brother with max rand time
   // and then add block to him son;
-
-  if(!has_node_siblings(tmp))
+  if(!has_node_siblings(tmp)) //if there tmp hasn't brothers
   {
-    new_son = create_kid_to_node(tmp, block);
+    if(compareBlockByInfo(tmp, block)) //if blocks got same hash
+      new_son = create_sibling_to_node(tmp, block); // create new block as brother
+    else
+      new_son = create_kid_to_node(tmp, block); // else normally add to tail
+
     blockchain->tail = new_son;
   }
   else// there are multitail
@@ -118,6 +121,16 @@ Block searchByLevel(Blockchain blockchain, int level)
 
   b = (Block) tmp->info;
   return b;
+}
+
+bool compareBlockByInfo(void *x, void *y)
+{
+  Block a = (Block)x;
+  Block b = (Block)y;
+  if(a->SHA256 != NULL && b->SHA256 != NULL)
+    if(!strncmp(a->SHA256, b->SHA256, SHA256_DIGEST_LENGTH))
+      return true;
+  return false;
 }
 
 
