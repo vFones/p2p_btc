@@ -32,6 +32,7 @@ Tree new_node(Tree parent, Tree prev_sibl, void *info)
 }
 
 
+//create a kid by info
 Tree create_kid_to_node(Tree t, void *info)
 {
   if (t == NULL)
@@ -44,7 +45,7 @@ Tree create_kid_to_node(Tree t, void *info)
     return (t->kids = new_node(t, NULL, info));
 }
 
-
+//create a brother by info
 Tree create_sibling_to_node(Tree t, void *info)
 {
   if(t == NULL)

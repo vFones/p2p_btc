@@ -12,7 +12,7 @@ static pthread_mutex_t mtx_tree;
 //TODO: SINCRONIZATION FD AND BLOCKCHAIN
 
 /********************
-   BLOCKCHAIN UTILS
+   BLOCKCHAIN & NET UTILS
  ********************/
 void visitBlock(void *arg)
 {
@@ -69,6 +69,49 @@ static Block create_block(Trns trns)
 }
 
 
+static void spread_block(Block b, int fd)
+{
+  //send to everyone exept the one who sended to me (control via fd)
+  Conn_node n = NULL;
+  Tree tmp = NULL;
+  tmp = connected_node->kids;
+  n = tmp->info;
+
+  //scroll list and sent to everyone
+  while(tmp->kids != NULL)
+  {
+    if( n->fd != fd) //execpt the one who sent to me
+    {
+      sendInt(n->fd, BLOCK_SPREAD);
+      printf("Sending block to %s:%hu\n", n->address, n->port);
+      sendBlock(n->fd, b);
+    }
+    tmp = tmp->kids;
+    n = tmp->info;
+  }
+
+  /**send to the wallet if connected to me**/
+
+  //reusing of Tree tmp and Conn_node n
+  tmp = connected_wallet->kids;
+  n = tmp->info;
+
+  // info necessary to compare address of destinatary and mine wallets
+  Trns dstwallet = b->info;
+  while(tmp->kids != NULL)
+  {
+    if(compare_by_addr(n, &dstwallet->dst))
+    {
+      sendInt(n->fd, TRANSACTION);
+      printf("Sending block to %s:%hu\n", n->address, n->port);
+      sendBlock(n->fd, b);
+      break;
+    }
+    tmp = tmp->kids;
+    n = tmp->info;
+  }
+  printf("Flooding ended\n");
+}
 
 
 /***********************
@@ -120,9 +163,12 @@ static void connect_to_network()
           {
             printf("Receiving %d-st block\n", diff);
             recvBlock(fd, b);
+
+            printf("Adding to mine blockchain\n");
             addBlockToBlockchain(blockchain, b);
-            //TODO: sending block while receiving new one
-            //spread_block();
+
+            printf("Starting flooding\n");
+            //spread_block(b,fd);
             diff--;
           }
         }
@@ -135,17 +181,17 @@ static void connect_to_network()
           // e.g.: blockchain_size = 15, size = 3, level to search in tree is 12
           while(level < blockchain->b_size)
           {
-            //search by level in tree
+            printf("Searchin by level\n");
             b = searchByLevel(blockchain, level);
+
+            printf("Sending block %d\n",level);
             sendBlock(fd, b);
+
+            printf("Sent block %d\n",level);
+            visitBlock(b);
             level++;
           }
         }
-
-        /*************************
-         * downloaded blockchain *
-         **  adding to my list  **
-         ************************/
       }
       //response negative
       else
@@ -154,6 +200,10 @@ static void connect_to_network()
         free(b);
       }
 
+      /*************************
+       * downloaded blockchain *
+       **  adding to my list  **
+       *************************/
 
       fd_open[fd] = 1;
       if(fd > max_fd)
@@ -253,10 +303,12 @@ static void* node_connection(void* arg)
         //search by level in tree
         printf("Searchin by level\n");
         b = searchByLevel(blockchain, level);
-        sendBlock(fd, b);
+
         printf("Sending block %d\n",level);
-        visitBlock(b);
+        sendBlock(fd, b);
+
         printf("Sent block %d\n",level);
+        visitBlock(b);
         level++;
       }
     }
@@ -266,9 +318,12 @@ static void* node_connection(void* arg)
       while (diff != 0)
       {
         recvBlock(fd, b);
+
+        printf("Adding to mine blockchain\n");
         addBlockToBlockchain(blockchain, b);
-        //TODO: sending block while receiving new one
-        //spread_block();
+
+        printf("Starting flooding\n");
+        //spread_block(b, fd);
         diff--;
       }
       //send last block since his got same size as me
@@ -340,22 +395,29 @@ static void* receive_transaction(void *arg)
     b = create_block(trns);
   }//recreate
 
+  printf("Adding to blockchain\n");
   addBlockToBlockchain(blockchain, b);
-  printf("Added to blockchain\n");
 
 
   //spread_block();
   pthread_exit(NULL);
 }
 
+
 static void *receive_block(void *arg)
 {
   int fd = *(int *)arg;
-  //TODO: receive macro BLOCK_SPREAD
-  // received from a thread (TODO: create function spread_block(Block, connected_node, connected_wallet))
-  //send to everyone exept the one who sended to me (control via fd)
-  //send to the wallet if connected to me
-  //fin(?)
+  // received from a thread
+  Block b = NULL;
+
+  recvBlock(fd, b);
+  printf("Received new block\n");
+  addBlockToBlockchain(blockchain, b);
+
+  //spread to others:
+  printf("Start flooding\n");
+  spread_block(b, fd);
+
   pthread_exit(NULL);
 }
 
@@ -367,8 +429,8 @@ void n_routine()
 {
   srand(time(NULL));
 
-  //sig_action
-
+  //sig_action and masks
+  struct sigaction sig_act;
   sig_act.sa_handler = sig_handler;
   sig_act.sa_flags = 0;
 
@@ -447,10 +509,12 @@ void n_routine()
         FD_SET(i_fd, &fdset);
 
 
+    //system("clear");
     printf("\tChoose:\n1) connect to peers;\n2) disconnect from peer\n5) quit\n");
     visit_tree(connected_node, visitConnectedNode);
     printf("\n");
     visit_tree(connected_wallet, visitConnectedWallet);
+    printf("\n");
     visit_tree(blockchain->genesis, visitBlock);
 
     n_ready = pselect(max_fd + 1, &fdset, NULL, NULL, NULL, &old_mask); //reset

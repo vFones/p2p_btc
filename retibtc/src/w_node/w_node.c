@@ -85,21 +85,14 @@ static void create_transaction(int choice)
 }
 
 
-//TODO: static void receive_transaction()
-// when receiving a transaction add new amount to mine
-// printing
-
 static void menu_case(int choice)
 {
   switch(choice)
   {
     case 1:
-      //request_amount();
-      break;
-    case 2:
       create_transaction(1);
       break;
-    case 3:
+    case 2:
       create_transaction(2);
       break;
     case 5:
@@ -116,9 +109,8 @@ static void print_menu()
 {
   //system("clear");
   printf("\n\nWallet address: %s:[%hu]\nWallet balance: %5.2f \n \
-    1) Request amount of cryptocurrecy.\n \
-    2) Make an exchange\n \
-    3) Buy more cryptocurrecy\n \
+    1) Make an exchange\n \
+    2) Buy more cryptocurrecy\n \
     5) Exit...\n \
     (press ENTER to activate)\n",\
     wallet_info.address, wallet_info.port, wallet_amount);
@@ -157,7 +149,6 @@ void wallet_routine()
     *******************/
   	if (FD_ISSET(STDIN_FILENO, &fset))
     {
-      fflush(stdin);
       fgets(line_buffer, 16, stdin);
       choice = atoi(line_buffer);
       menu_case(choice);
@@ -177,17 +168,20 @@ void wallet_routine()
       }
       else
       {
-        switch(request)
+        if(request == TRANSACTION)
         {
-          case TRANSACTION:
-            //TODO: receive_transaction();
-            break;
-
-          default:
-            fprintf(stderr, "Request received is not known...\n");
-            print_menu();
-            break;
+          Trns t = (Trns) Malloc(TRNS_SIZE);
+          recvTrns(node_info.fd, t);
+          printf("Received new transaction from %s:%hu\n", t->dst.address, t->dst.port);
+          printf("Updating new amount\n");
+          sleep(2);
         }
+        else
+        {
+          fprintf(stderr, "Request received is not known...\n");
+          sleep(2);
+        }
+        print_menu();
       }
     }
   }

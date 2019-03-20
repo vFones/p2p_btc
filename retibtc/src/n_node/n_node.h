@@ -31,7 +31,6 @@ Tree connected_node;
 Tree connected_wallet;
 
 int exit_flag;
-struct sigaction sig_act;
 
 int max_fd;
 int *fd_open;
