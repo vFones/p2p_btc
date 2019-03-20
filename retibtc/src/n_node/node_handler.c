@@ -25,18 +25,18 @@ void visitBlock(void *arg)
     printf("\tBlock [GENESIS]\n");
   else
   {
-    Trns trns = b->info;
+    trns_t trns = *(trns_t *)b->info;
     printf("Block[%d] --> [%s:%hu -> %s:%hu] [%0.2f BTC] [%d] \n", \
-      b->n_block, trns->src.address, trns->src.port, \
-      trns->dst.address, trns->dst.port, trns->amount, trns->random);
+      b->n_block, trns.src.address, trns.src.port, \
+      trns.dst.address, trns.dst.port, trns.amount, trns.random);
   }
 }
 
 
-static Block create_block(Trns trns)
+static Block create_block(trns_t trns)
 {
   Block b = (Block)Malloc(BLOCK_SIZE);
-  b->info = trns;
+  b->info = &trns;
   b->n_block = blockchain->b_size+1;
   printf("Creating block with n_block = [%d] and blockchain size [%d]\n",b->n_block, blockchain->b_size);
   b->randomtime = 5+(rand()%11);
@@ -50,43 +50,46 @@ static Block create_block(Trns trns)
 static void spread_block(Block b, int fd)
 {
   //send to everyone exept the one who sended to me (control via fd)
-  Conn_node n = NULL;
+  node_t n;
   Tree tmp = NULL;
-  tmp = connected_node->kids;
-  n = tmp->info;
 
+  tmp = connected_node->kids;
+  n = *(node_t *)tmp->info;
+
+  request_t macro = BLOCK_SPREAD;
   //scroll list and sent to everyone
   while(tmp->kids != NULL)
   {
-    if( n->fd != fd) //execpt the one who sent to me
+    if( n.fd != fd) //execpt the one who sent to me
     {
-      sendInt(n->fd, BLOCK_SPREAD);
-      printf("Sending block to %s:%hu\n", n->address, n->port);
-      sendBlock(n->fd, b);
+      Write(n.fd, &macro, sizeof(macro));
+      printf("Sending block to %s:%hu\n", n.address, n.port);
+      sendBlock(n.fd, b);
     }
     tmp = tmp->kids;
-    n = tmp->info;
+    n = *(node_t *)tmp->info;
   }
 
   /**send to the wallet if connected to me**/
 
   //reusing of Tree tmp and Conn_node n
   tmp = connected_wallet->kids;
-  n = tmp->info;
+  n = *(node_t *)tmp->info;
 
   // info necessary to compare address of destinatary and mine wallets
-  Trns dstwallet = b->info;
+  trns_t dstwallet = *(trns_t *)b->info;
   while(tmp->kids != NULL)
   {
-    if(compare_by_addr(n, &dstwallet->dst))
+    if(compare_by_addr(&n, &dstwallet.dst))
     {
-      sendInt(n->fd, TRANSACTION);
-      printf("Sending block to %s:%hu\n", n->address, n->port);
-      sendBlock(n->fd, b);
+      macro = TRANSACTION;
+      Write(n.fd, &macro, sizeof(macro));
+      printf("Sending block to %s:%hu\n", n.address, n.port);
+      sendBlock(n.fd, b);
       break;
     }
     tmp = tmp->kids;
-    n = tmp->info;
+    n = *(node_t *)tmp->info;
   }
   printf("Flooding ended\n");
 }
@@ -97,13 +100,13 @@ static void spread_block(Block b, int fd)
 ***********************/
 static void connect_to_network()
 {
-  struct confirm_new_node new_conn;
-
+  use_node_t new_conn;
+  request_t macro = NODE_CONNECTION;
   // try to connect to node_n node
   // TODO: check ip address and retry
   // TODO: check port
 
-  new_conn = choose_node();
+  choose_node(&new_conn);
 
   if(new_conn.confirm == 'y')
   {
@@ -113,24 +116,26 @@ static void connect_to_network()
 
     Block b = (Block)Malloc(BLOCK_SIZE);
 
-    fillAddressIPv4(&tmp, new_conn.node->address ,new_conn.node->port);
-    visitConnectedNode(new_conn.node);
+    fillAddressIPv4(&tmp, new_conn.n.address ,new_conn.n.port);
+    new_conn.n.fd = fd;
+    visitConnectedNode(&new_conn.n);
 
     if (connect(fd, (struct sockaddr *)&tmp, sizeof(struct sockaddr)) != -1)
     {
-      sendInt(fd, NODE_CONNECTION);
+      Write(fd, &macro, sizeof(macro));
 
       // waiting confirming in response
-      recvInt(fd, &bsize_new_conn);
+      printf("\nAspetto un intero che è il size della SUA blochchain\n");
+      Read(fd, &bsize_new_conn, sizeof(bsize_new_conn));
       printf("Size received of his blockchain: %d\n", bsize_new_conn);
-      
-      sendInt(fd, blockchain->b_size);
+
+      printf("Mando un intero che è il size della mia blockchain\n");
+      Write(fd, &blockchain->b_size, sizeof(blockchain->b_size));
       printf("Sent my blockchain size[%d]\n", blockchain->b_size);
 
       /*************************
        **   SYNC BLOCKCHAIN   **
        ************************/
-
 
       int diff = blockchain->b_size - bsize_new_conn;
       int level;
@@ -139,9 +144,8 @@ static void connect_to_network()
       //if his blockchain is bigger, receive
       if(diff > 0)
       {
-        level = 1;
-        printf("Sending block starting from %d-st block of blockchain\n", diff);
-        while(level <= diff)
+        printf("Sending block starting from %d-st block of blockchain\n", blockchain->b_size - diff);
+        for(level = (blockchain->b_size - diff)+1; level <= blockchain->b_size; level++)
         {
           printf("Searchin by level\n");
           b = searchByLevel(blockchain, level);
@@ -151,10 +155,9 @@ static void connect_to_network()
 
           printf("Sent block %d\n",level);
           visitBlock(b);
-          level++;
         }
       }
-      else // him got more block than me
+      else if(diff < 0)// him got more block than me
       {
         level = 0;
         // ( blockchain_size - diff  = livello da cui partire a mandare )
@@ -163,6 +166,7 @@ static void connect_to_network()
         {
           recvBlock(fd, b);
           visitBlock(b);
+
           printf("Adding to mine blockchain\n");
           addBlockToBlockchain(blockchain, b);
 
@@ -183,12 +187,14 @@ static void connect_to_network()
       if(fd > max_fd)
         max_fd = fd;
 
-      new_conn.node->fd = fd;
+      node_t *node = (node_t *)Malloc(sizeof(node_t *));
+      node->fd = new_conn.n.fd;
+      node->port = new_conn.n.port;
+      strncpy(node->address, new_conn.n.address, LEN_ADDRESS);
 
-      pthread_mutex_lock(&mtx_tree);
-      create_kid_to_node(connected_node, new_conn.node);
-      pthread_mutex_unlock(&mtx_tree);
-
+      //pthread_mutex_lock(&mtx_tree);
+      create_kid_to_node(connected_node, node);
+      //pthread_mutex_unlock(&mtx_tree);
     }
     //failed connect
     else
@@ -201,24 +207,24 @@ static void connect_to_network()
 
 static void close_connection()
 {
-  struct confirm_new_node node = choose_node();
+  use_node_t node;
+  choose_node(&node);
   printf("Searching ->");
-  visitConnectedNode(node.node);
+  visitConnectedNode(&node.n);
 
-  Tree found = remove_from_tree(connected_node, (void*)node.node, compare_by_addr);
+  Tree found = remove_from_tree(connected_node, (void*)&node.n, compare_by_addr);
 
   if(found != NULL)
   {
     printf("Found connected node with that IP:PORT\n");
     printf("******Closing connection*****\n");
-    node.node = found->info;
-    visitConnectedNode(node.node);
-    fd_open[node.node->fd] = 0;
-    close(node.node->fd);
+    node.n = *(node_t *)found->info;
+    visitConnectedNode(&node.n);
+    fd_open[node.n.fd] = 0;
+    close(node.n.fd);
   }
   else
     printf("Node not found\n");
-  free(node.node);
 }
 
 
@@ -251,18 +257,20 @@ static void* node_connection(void* arg)
 {
   // adding node to my custom list after confirming
   int fd = *(int*)arg;
-  Conn_node n = NULL;
+  node_t n;
 
   int bsize_n = 0;
-  Block b = NULL;
+  Block b = (Block) Malloc(BLOCK_SIZE);
   n = getpeerNode(fd);
 
   //sending confirm
-  sendInt(fd, blockchain->b_size);
-  printf("Sent size of my blockchain: [%d]\n",blockchain->b_size);
+  fprintf(stderr, "\nInvio un intero che è il size della mia blockchain\n");
+  Write(fd, &blockchain->b_size, sizeof(blockchain->b_size));
+  fprintf(stderr, "Sent size of my blockchain: [%d]\n",blockchain->b_size);
 
-  recvInt(fd, &bsize_n);
-  printf("Received his blockchain size: [%d]\n", bsize_n);
+  fprintf(stderr, "Ricevo un intero che è il size della SUA blockchain andando a sovrascriver -> %d\n",bsize_n);
+  Read(fd, &bsize_n, sizeof(bsize_n));
+  fprintf(stderr, "Received his blockchain size: [%d]\n", bsize_n);
 
 
   int diff = blockchain->b_size - bsize_n;
@@ -271,9 +279,8 @@ static void* node_connection(void* arg)
   //if my blockchain is bigger send
   if(diff > 0)
   {
-    level = 1;
-    printf("Sending block starting from %d-st block of blockchain\n", diff);
-    while(level <= diff)
+    printf("Sending block starting from %d-st block of blockchain\n", blockchain->b_size - diff);
+    for(level = (blockchain->b_size - diff)+1; level <= blockchain->b_size; level++)
     {
       printf("Searchin by level\n");
       b = searchByLevel(blockchain, level);
@@ -282,36 +289,40 @@ static void* node_connection(void* arg)
       sendBlock(fd, b);
 
       printf("Sent block %d\n", level);
-      visitBlock(b);
-      level++;
     }
   }
-  else // i must receive
+  else if(diff < 0) // i must receive
   {
     level = 0;
     printf("Receiving block \n");
     while(level > diff)
     {
+      printf("Ricevo blocco\n");
       recvBlock(fd, b);
       visitBlock(b);
       printf("Adding to mine blockchain\n");
       addBlockToBlockchain(blockchain, b);
 
-      printf("Starting flooding\n");
+      //printf("Starting flooding\n");
       //spread_block(b,fd);
       level--; 
     }
   }
 
   printf("*****BLOCKCHAIN SYNCED******\n");
-  
-  pthread_mutex_lock(&mtx_tree);
-    create_kid_to_node(connected_node, n);
-  pthread_mutex_unlock(&mtx_tree);
 
   fd_open[fd] = 1;
   if(fd > max_fd)
     max_fd = fd;
+
+  node_t *node = (node_t *)Malloc(sizeof(node_t *));
+  node->fd = n.fd;
+  node->port = n.port;
+  strncpy(node->address, n.address, LEN_ADDRESS);
+
+  //pthread_mutex_lock(&mtx_tree);
+  create_kid_to_node(connected_node, node);
+  //pthread_mutex_unlock(&mtx_tree);
 
   pthread_exit(NULL);
 }
@@ -321,14 +332,19 @@ static void* wallet_connection(void *arg)
 {
   //auth
   int fd = *(int*)arg;
-  Conn_node n = NULL;
+  node_t n;
   n = getpeerNode(fd);
+  int confirm = 1;
+  Write(fd, &confirm, sizeof(confirm));
 
-  sendInt(fd, 1);
+  node_t *wallet = (node_t *)Malloc(sizeof(node_t));
+  wallet->fd = n.fd;
+  wallet->port = n.port;
+  strncpy(wallet->address, n.address, LEN_ADDRESS);
 
-  pthread_mutex_lock(&mtx_tree);
-    create_kid_to_node(connected_wallet, n);
-  pthread_mutex_unlock(&mtx_tree);
+  //pthread_mutex_lock(&mtx_tree);
+    create_kid_to_node(connected_wallet, wallet);
+  //pthread_mutex_unlock(&mtx_tree);
 
   fd_open[fd] = 1;
   if(fd > max_fd)
@@ -342,13 +358,13 @@ static void* wallet_connection(void *arg)
 static void* receive_transaction(void *arg)
 {
   int fd = *(int*)arg;
-  Trns trns = (Trns)Malloc(TRNS_SIZE);
-
+  trns_t trns;
+  int confirm = 1;
   // receiv transaction from w_node
-  recvTrns(fd, trns);
-  printf("package from %s:%hu\n", trns->src.address, trns->src.port);
+  Read(fd, &trns, sizeof(trns));
+  printf("package from %s:%hu\n", trns.src.address, trns.src.port);
   // send confirm
-  sendInt(fd, 1);
+  Write(fd, &confirm, sizeof(confirm));
 
   //creating block with transaction
   Block b = create_block(trns);
@@ -363,7 +379,6 @@ static void* receive_transaction(void *arg)
   while(b->n_block <= blockchain->b_size)
   {
     printf("Recreating block\n");
-    free(b);
     b = create_block(trns);
   }//recreate
 
@@ -446,7 +461,8 @@ void n_routine()
   fd_set fdset; //fdset to fill in select while
   int accept_fd = 0;
 
-  int response = 0, request = 0;
+  int response = 0;
+  request_t request = 0;
 
   // thread stuff
   pthread_t *tid = (pthread_t *)Malloc(BACKLOG);
@@ -557,7 +573,7 @@ void n_routine()
       if(FD_ISSET(i_fd, &fdset))
       {
         n_ready--;
-        response = recvInt(i_fd, &request);
+        response = Read(i_fd, &request, sizeof(request));
 
         /************************************
          * if closed because EOF while Read;
@@ -614,6 +630,8 @@ void n_routine()
         }
         tid_index++;
       }
+      for(int i=0; i<tid_index; i++)
+        pthread_join(tid[tid_index], NULL);
     }
   }
 

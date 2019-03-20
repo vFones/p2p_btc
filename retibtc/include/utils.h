@@ -11,5 +11,4 @@
 void* Malloc(size_t size);
 void usage(char *msg);
 
-
 #endif

@@ -13,23 +13,23 @@
 
 #define LEN_ADDRESS 32
 
-struct connected_node{
+typedef struct node_info{
   int fd;
   char address[LEN_ADDRESS];
-  short port;
-};
+  int port;
+} node_t;
 #define SIZE_NODE sizeof(struct connected_node)
-typedef struct connected_node* Conn_node;
 
-struct confirm_new_node{
-  Conn_node node;
+
+typedef struct node_to_use{
+  node_t n;
   char confirm;
-};
+} use_node_t;
 
-void fillAddressIPv4(struct sockaddr_in *socket_address, char *ip_address, short port);
+void fillAddressIPv4(struct sockaddr_in *socket_address, char *ip_address, int port);
 
-struct connected_node getsockNode(int fd);
-Conn_node getpeerNode(int fd);
+node_t getsockNode(int fd);
+node_t getpeerNode(int fd);
 
 void visitConnectedNode(void *args);
 void visitConnectedWallet(void *args);
@@ -38,6 +38,6 @@ bool compare_connected_node(void *x, void *y);
 bool compare_by_addr(void *x, void *y);
 bool compare_by_fd(void *x, void *y);
 
-struct confirm_new_node choose_node();
+int choose_node(use_node_t *new_node);
 
 #endif

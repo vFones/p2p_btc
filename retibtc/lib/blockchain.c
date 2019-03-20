@@ -72,7 +72,7 @@ void addBlockToBlockchain(Blockchain blockchain, Block block)
   // if latest node of blockchain got siblings
   // use max_randtime to checkup the brother with max rand time
   // and then add block to him son;
-  printf("Aggiungo alla blockchain \n");
+  printf("\n\nAggiungo alla blockchain \n");
   if(!has_node_siblings(blockchain->tail)) //if tmp hasn't brothers
   {
     printf("La tail non ha nessun fratello\n");
@@ -95,7 +95,7 @@ void addBlockToBlockchain(Blockchain blockchain, Block block)
   }
   blockchain->tail = new_son;
   blockchain->b_size++;
-  printf("Aggiorno la tail e size blockchain [%d]\n", blockchain->b_size++);
+  printf("Aggiorno la tail e size blockchain [%d]\n\n", blockchain->b_size);
 }
 
 // return block with that level in blockchain
@@ -127,7 +127,7 @@ bool compareBlockByInfo(void *x, void *y)
 
   if(a->n_block == b->n_block &&
       a->randomtime == b->randomtime &&
-      compare_by_addr((Trns)a->info, (Trns) b->info) )
+      compare_by_addr(a->info, b->info) )
     return true;
   return false;
 }
@@ -141,7 +141,8 @@ int sendBlock(int fd, Block b)
     perror("sendBlock");
     return -1;
   }
-  sendTrns(fd, (Trns)b->info);
+  trns_t t = *(trns_t *)b->info;
+  Write(fd, &t, sizeof(t));
 
   return 0;
 }
@@ -149,14 +150,13 @@ int sendBlock(int fd, Block b)
 
 int recvBlock(int fd, Block b)
 {
-  Trns trns = (Trns) Malloc(TRNS_SIZE);
   if(Read(fd, b, BLOCK_SIZE) != 0)
   {
     perror("sendBlock");
     return -1;
   }
-  recvTrns(fd, trns);
-  b->info = trns;
+  trns_t t = *(trns_t *)b->info;
+  Read(fd, &t, sizeof(t));
 
   return 0;
 }

@@ -4,28 +4,23 @@
 #include "io.h"
 #include "net.h"
 
-enum node_macro{
+typedef enum request{
   TRANSACTION,
   NODE_CONNECTION,
   WALLET_CONNECTION,
   BLOCK_SPREAD
-};
+} request_t;
 
-struct transaction{
-  struct connected_node src;
-  struct connected_node dst;
+typedef struct transaction{
+  node_t src;
+  node_t dst;
   float amount;
   int random;
-};
+} trns_t;
 typedef struct transaction* Trns;
 #define TRNS_SIZE sizeof(struct transaction)
 
-Trns fillTransaction(
-  struct connected_node src, \
-  struct connected_node dst, \
-  float amount );
+void fillTransaction(node_t src, node_t dst, float amount, trns_t *t);
 
-int sendTrns(int fd, Trns trns);
-int recvTrns(int fd, Trns trns);
 
 #endif

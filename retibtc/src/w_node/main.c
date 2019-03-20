@@ -10,12 +10,12 @@ int main(int argc, char **argv)
     switch(opt)
     {
       case 'n':
-        strncpy(node_info.address, optarg, LEN_ADDRESS);
+        strncpy(node.address, optarg, LEN_ADDRESS);
         flags[0] = 1;
         break;
 
       case 'p':
-        node_info.port = (unsigned short)atoi(optarg);
+        node.port = (unsigned short)atoi(optarg);
         flags[1] = 1;
         break;
 
@@ -30,25 +30,25 @@ int main(int argc, char **argv)
 
   if(!flags[0])
   {
-    strncpy(node_info.address, "127.0.0.1", LEN_ADDRESS);
-    strncpy(wallet_info.address, "127.0.0.1", LEN_ADDRESS);
+    strncpy(node.address, "127.0.0.1", LEN_ADDRESS);
+    strncpy(wallet.address, "127.0.0.1", LEN_ADDRESS);
   }
   free(flags);
 
   wallet_amount = 0.0;
 
-  fillAddressIPv4(&node_address, node_info.address, node_info.port);
+  fillAddressIPv4(&node_address, node.address, node.port);
 
-  node_info.fd = Socket(AF_INET, SOCK_STREAM, 0);
-  Connect(node_info.fd, (struct sockaddr *)&node_address);
-  wallet_info = getsockNode(node_info.fd);
-
-  sendInt(node_info.fd, WALLET_CONNECTION);
+  node.fd = Socket(AF_INET, SOCK_STREAM, 0);
+  Connect(node.fd, (struct sockaddr *)&node_address);
+  wallet = getsockNode(node.fd);
+  request_t macro = WALLET_CONNECTION;
+  Write(node.fd, &macro, sizeof(macro));
 
   //TODO: auth
   int response = 0;
 
-  if (!recvInt(node_info.fd, &response) && response)
+  if (!(Read(node.fd, &response, sizeof(response))) && response )
     wallet_routine();
 
   exit(EXIT_SUCCESS);

@@ -7,7 +7,8 @@ static void create_transaction(int choice)
   float cryptocurrecy = 0.0;
   char buffer[32], c = 'n';
   int confirm = 0;
-  Trns trns = NULL;
+  trns_t t;
+  request_t macro = TRANSACTION;
 
   switch(choice)
   {
@@ -17,7 +18,8 @@ static void create_transaction(int choice)
         printf("\nyour balance is 0. In order to make a transaction you must first have cryptocurrecy\n");
         break;
       }
-      struct confirm_new_node new_conn = choose_node();
+      use_node_t new_conn;
+      choose_node(&new_conn);
       if(new_conn.confirm == 'y')
       {
         printf("Insert a valid amount to send: \n");
@@ -35,12 +37,11 @@ static void create_transaction(int choice)
 
           if(c == 'y')
           {
-            trns = fillTransaction(wallet_info, *(new_conn.node), cryptocurrecy);
-
-            sendInt(node_info.fd, TRANSACTION);
-            Write(node_info.fd, &trns, sizeof(trns));
+            fillTransaction(wallet, new_conn.n, cryptocurrecy, &t);
+            Write(node.fd, &macro, sizeof(macro));
+            Write(node.fd, &t, sizeof(t));
             printf("\nwait confirm from peer\n");
-            recvInt(node_info.fd, &confirm);
+            Read(node.fd, &confirm, sizeof(confirm));
 
             if(!confirm)
               fprintf(stderr, "Transaction not validate\n");
@@ -59,18 +60,16 @@ static void create_transaction(int choice)
       scanf(" %s", buffer);
       cryptocurrecy = strtof(buffer, NULL);
 
-      trns = fillTransaction(wallet_info, wallet_info, cryptocurrecy);
+      fillTransaction(wallet, wallet, cryptocurrecy, &t);
 
-      printf("Source: %s:%hu -> Destination: %s:%hu\n", trns->src.address, trns->src.port, trns->dst.address, trns->dst.port);
-      printf("%.2f, %d",trns->amount, trns->random);
+      printf("Source: %s:%hu -> Destination: %s:%hu\n", t.src.address, t.src.port, t.dst.address, t.dst.port);
+      printf("%.2f, %d",t.amount, t.random);
 
-
-      sendInt(node_info.fd, TRANSACTION);
-
-      sendTrns(node_info.fd, trns);
+      Write(node.fd, &macro, sizeof(macro));
+      Read(node.fd, &t, sizeof(t));
 
       printf("\nwait confirm from peer\n");
-      recvInt(node_info.fd, &confirm);
+      Read(node.fd, &confirm, sizeof(confirm));
 
       if(!confirm)
         fprintf(stderr, "Transaction not validate, aborting operation\n");
@@ -113,7 +112,7 @@ static void print_menu()
     2) Buy more cryptocurrecy\n \
     5) Exit...\n \
     (press ENTER to activate)\n",\
-    wallet_info.address, wallet_info.port, wallet_amount);
+    wallet.address, wallet.port, wallet_amount);
 }
 
 
@@ -127,16 +126,15 @@ void wallet_routine()
 
   /* initialize file descriptor set */
   FD_ZERO(&fset);
-  maxfd = MAX(STDIN_FILENO, node_info.fd) + 1;
+  maxfd = MAX(STDIN_FILENO, node.fd) + 1;
   while (1)
   {
     FD_ZERO(&fset);
-  	FD_SET(node_info.fd, &fset); /* set for the socket */
+  	FD_SET(node.fd, &fset); /* set for the socket */
   	FD_SET(STDIN_FILENO, &fset); /* set for the standard input */
 
     print_menu();
-    fflush(stdin);
-    while((nread = select(maxfd, &fset , NULL , NULL , NULL)) < 0);
+    nread = select(maxfd, &fset , NULL , NULL , NULL);
 
     if(nread < 0 && errno == EINTR)
     {
@@ -157,22 +155,22 @@ void wallet_routine()
     /***************************
       Socket connections
     ***************************/
-  	if (FD_ISSET(node_info.fd, &fset))
+  	if (FD_ISSET(node.fd, &fset))
     {
-      int error = recvInt(node_info.fd, &request);
+  	  int error = Read(node.fd, &request, sizeof(request));
 
       if(error)
       {
-        close(node_info.fd);
+        close(node.fd);
         exit(EXIT_FAILURE);
       }
       else
       {
         if(request == TRANSACTION)
         {
-          Trns t = (Trns) Malloc(TRNS_SIZE);
-          recvTrns(node_info.fd, t);
-          printf("Received new transaction from %s:%hu\n", t->dst.address, t->dst.port);
+          trns_t t;
+          Read(node.fd, &t, sizeof(t));
+          printf("Received new transaction from %s:%hu\n", t.dst.address, t.dst.port);
           printf("Updating new amount\n");
           sleep(2);
         }

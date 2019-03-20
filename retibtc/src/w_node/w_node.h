@@ -16,13 +16,11 @@
 
 #define MESSAGE "Usage: ./wallet [-n <node>] -p <node_port> \n"
 
-struct connected_node node_info;
 struct sockaddr_in node_address;
-
-
-struct connected_node wallet_info;
-
+node_t node;
+node_t wallet;
 float wallet_amount;
+
 
 void wallet_routine();
 
