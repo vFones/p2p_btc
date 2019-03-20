@@ -5,10 +5,10 @@ Blockchain create_blockchain()
   Block gen_block = (Block)Malloc(BLOCK_SIZE);
 
   printf("creating blockchain: genesis\n");
-  gen_block->prev_SHA256 = "0000000000000000000000000000000000000000000000000000000000000000";
-  printf("prev_id: %s\n",gen_block->prev_SHA256);
-  gen_block->SHA256 = "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f";
-  printf("id: %s\n",gen_block->SHA256);
+  
+  memcpy(gen_block->prev_SHA256,"0000000000000000000000000000000000000000000000000000000000000000", SHA256_DIGEST_LENGTH);
+  memcpy(gen_block->SHA256, "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f", SHA256_DIGEST_LENGTH);
+ 
   gen_block->n_block = 0;
   gen_block->randomtime = 15;
   gen_block->info = NULL;
@@ -30,14 +30,12 @@ static struct block getBlockFromNode(Tree node)
   return b;
 }
 
-char *getLatestSHA256(Blockchain blockchain)
+void getLatestSHA256(Blockchain blockchain, unsigned char *SHA)
 {
   Block block = NULL;
   block = (Block)blockchain->tail->info;
-
-  char *latest = block->SHA256;
+  strncpy((char *)SHA, (char *)block->SHA256, SHA256_DIGEST_LENGTH);
   printf("gotLatestSHA256...\n");
-  return latest;
 }
 
 
@@ -80,45 +78,45 @@ static Tree max_randtime(Tree node)
 // add a new block to blockchain checking for multitail
 void addBlockToBlockchain(Blockchain blockchain, Block block)
 {
-  Tree tmp = blockchain->tail;
   Tree multitail = NULL;
   Tree new_son = NULL;
   // if latest node of blockchain got siblings
   // use max_randtime to checkup the brother with max rand time
   // and then add block to him son;
-  if(!has_node_siblings(tmp)) //if there tmp hasn't brothers
+  if(!has_node_siblings(blockchain->tail)) //if tmp hasn't brothers
   {
-    if(compareBlockByInfo(tmp, block)) //if blocks got same hash
-      new_son = create_sibling_to_node(tmp, block); // create new block as brother
+    if(compareBlockByInfo(blockchain->tail, block)) //if blocks got same hash
+      new_son = create_sibling_to_node(blockchain->tail, block); // create new block as brother
     else
-      new_son = create_kid_to_node(tmp, block); // else normally add to tail
-
-    blockchain->tail = new_son;
+      new_son = create_kid_to_node(blockchain->tail, block); // else normally add to tail
   }
   else// there are multitail
   {
-    multitail = max_randtime(tmp);
+    multitail = max_randtime(blockchain->tail);
     new_son = create_kid_to_node(multitail, block);
-    blockchain->tail = new_son;
   }
+  blockchain->tail = new_son;
   blockchain->b_size++;
 }
 
 // return block with that level in blockchain
 Block searchByLevel(Blockchain blockchain, int level)
 {
-  Tree tmp = blockchain->genesis;
+  Tree tmp = blockchain->genesis->kids;
   Block b = NULL;
-  int i = 0;
+  int i = 1;
 
-  while (tmp->kids != NULL || i != level)
+  for(i = 1; i < level; i++)
   {
-    tmp = tmp->kids;
-    i++;
+    if(tmp->kids != NULL)
+      tmp = tmp->kids;
   }
+
   if (has_node_siblings(tmp))
     tmp = max_randtime(tmp);
 
+  printf("Level: %d, found at level: %d", level, i);
+  
   b = (Block) tmp->info;
   return b;
 }
@@ -128,7 +126,7 @@ bool compareBlockByInfo(void *x, void *y)
   Block a = (Block)x;
   Block b = (Block)y;
   if(a->SHA256 != NULL && b->SHA256 != NULL)
-    if(!strncmp(a->SHA256, b->SHA256, SHA256_DIGEST_LENGTH))
+    if( !(strcmp((char *)a->SHA256, (char *)b->SHA256)) )
       return true;
   return false;
 }

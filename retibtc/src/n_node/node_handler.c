@@ -11,20 +11,31 @@ static pthread_mutex_t mtx_tree;
 
 //TODO: SINCRONIZATION FD AND BLOCKCHAIN
 
-/********************
-   BLOCKCHAIN & NET UTILS
- ********************/
+/*************************
+* BLOCKCHAIN & NET UTILS *
+*************************/
 void visitBlock(void *arg)
 {
   if(arg == NULL)
     return;
   Block b = (Block)arg;
-  if(!b->n_block)
+  
+    if(!b->n_block)
     printf("Block[GENESIS]\n");
   else
   {
+    printf("Previous SHA: ");
+    for(int i=0;i<SHA256_DIGEST_LENGTH; i++)
+      printf("%02x", b->prev_SHA256[i]);
+    printf("\n");
+    
+    printf("SHA:");
+    for(int i=0; i<SHA256_DIGEST_LENGTH; i++)
+      printf("%02x", b->SHA256[i]);
+    printf("\n");
+
     Trns trns = b->info;
-    printf("block[%d]\t [%s:%hu -> %s:%hu] [%0.2f BTC] [%d] \n", \
+    printf("block[%d] --> [%s:%hu -> %s:%hu] [%0.2f BTC] [%d] \n", \
       b->n_block, trns->src.address, trns->src.port, \
       trns->dst.address, trns->dst.port, trns->amount, trns->random);
   }
@@ -36,9 +47,10 @@ static Block create_block(Trns trns)
   Block b = (Block)Malloc(BLOCK_SIZE);
   b->info = trns;
   b->n_block = blockchain->b_size+1;
+  printf("Creating block with n_block = [%d] and blockchain size [%d]\n",b->n_block, blockchain->b_size);
   b->randomtime = 5+(rand()%11);
 
-  b->prev_SHA256 = getLatestSHA256(blockchain);
+  getLatestSHA256(blockchain, b->prev_SHA256);
 
   // calculate hash of new block
   unsigned char *tmpb_infoSHA256 = (unsigned char *)Malloc(SHA256_DIGEST_LENGTH);
@@ -47,9 +59,10 @@ static Block create_block(Trns trns)
   //create a string with previous hash + new tmp hash
   char *tmpSHA256 = (char*)Malloc(SHA256_DIGEST_LENGTH * 2 + 2);
 
-  strncpy(tmpSHA256, b->prev_SHA256, SHA256_DIGEST_LENGTH);
+  strncpy(tmpSHA256, (char *)b->prev_SHA256, SHA256_DIGEST_LENGTH);
   strncpy(&tmpSHA256[SHA256_DIGEST_LENGTH], (char *)tmpb_infoSHA256, SHA256_DIGEST_LENGTH);
   tmpSHA256[SHA256_DIGEST_LENGTH*2 + 1] = '\0';
+  
   free(tmpb_infoSHA256);
 
   // calculate hash of new string just created and assign to block
@@ -57,11 +70,7 @@ static Block create_block(Trns trns)
   SHA256((unsigned char *)tmpSHA256, strlen(tmpSHA256), hash);
   free(tmpSHA256);
 
-  b->SHA256 = (char *)Malloc(SHA256_DIGEST_LENGTH*2);
-
-  for(int i = 0; i < SHA256_DIGEST_LENGTH; i++)
-    sprintf(&b->SHA256[i*2], "%02x", hash[i]);
-  printf("\n");
+  strncpy((char *)b->SHA256, (char *)hash, SHA256_DIGEST_LENGTH);
 
   printf("Created block\n");
 
@@ -115,8 +124,8 @@ static void spread_block(Block b, int fd)
 
 
 /***********************
-  STDIN MENU FUNCTIONS
-************************/
+* STDIN MENU FUNCTIONS *
+***********************/
 static void connect_to_network()
 {
   struct confirm_new_node new_conn;
@@ -144,61 +153,57 @@ static void connect_to_network()
 
       // waiting confirming in response
       recvInt(fd, &bsize_new_conn);
-      printf("Size received of his blockchain: %d\n",bsize_new_conn);
+      printf("Size received of his blockchain: %d\n", bsize_new_conn);
+      
+      sendInt(fd, blockchain->b_size);
+      printf("Sent my blockchain size[%d]\n", blockchain->b_size);
+
       /*************************
        **   SYNC BLOCKCHAIN   **
        ************************/
-      //if response is positive add to my list and sync blockchain
-      if(bsize_new_conn)
+
+
+      int diff = blockchain->b_size - bsize_new_conn;
+      int level;
+      printf("Diff = his blockchain size [%d] - blockchain size[%d] = %d\n", bsize_new_conn,blockchain->b_size,diff);
+      
+      //if his blockchain is bigger, receive
+      if(diff > 0)
       {
-        int diff = bsize_new_conn - blockchain->b_size;
-        printf("Diff = his blockchain size [%d] - blockchain size[%d] = %d\n", bsize_new_conn,blockchain->b_size,diff);
-        // if him got more block than me, send to me
-        if(bsize_new_conn >= blockchain->b_size)
+        level = 1;
+        printf("Sending block starting from %d-st block of blockchain\n", diff);
+        while(level <= diff)
         {
-          //receiving last block just in case size is the same because multi-head
-          sendInt(fd, diff);
+          printf("Searchin by level\n");
+          b = searchByLevel(blockchain, level);
 
-          while(diff != 0)
-          {
-            printf("Receiving %d-st block\n", diff);
-            recvBlock(fd, b);
+          printf("Sending block %d\n",level);
+          sendBlock(fd, b);
 
-            printf("Adding to mine blockchain\n");
-            addBlockToBlockchain(blockchain, b);
-
-            printf("Starting flooding\n");
-            //spread_block(b,fd);
-            diff--;
-          }
-        }
-        else //i've got more block than him, sending to him
-        {
-          sendInt(fd, diff);
-          diff = abs(diff);
-          int level = (blockchain->b_size - diff);
-          // ( blockchain_size - diff  = livello da cui partire a mandare )
-          // e.g.: blockchain_size = 15, size = 3, level to search in tree is 12
-          while(level < blockchain->b_size)
-          {
-            printf("Searchin by level\n");
-            b = searchByLevel(blockchain, level);
-
-            printf("Sending block %d\n",level);
-            sendBlock(fd, b);
-
-            printf("Sent block %d\n",level);
-            visitBlock(b);
-            level++;
-          }
+          printf("Sent block %d\n",level);
+          visitBlock(b);
+          level++;
         }
       }
-      //response negative
-      else
+      else // him got more block than me
       {
-        printf("Node got 0 block\n");
-        free(b);
+        level = 0;
+        // ( blockchain_size - diff  = livello da cui partire a mandare )
+        // e.g.: blockchain_size = 15, size = 3, level to search in tree is 12
+        while(level > diff)
+        {
+          recvBlock(fd, b);
+          visitBlock(b);
+          printf("Adding to mine blockchain\n");
+          addBlockToBlockchain(blockchain, b);
+
+          printf("Starting flooding\n");
+          //spread_block(b,fd);
+          level--;
+        }
       }
+      
+      printf("*****BLOCKCHAIN SYNCED******\n");
 
       /*************************
        * downloaded blockchain *
@@ -280,56 +285,57 @@ static void* node_connection(void* arg)
   Conn_node n = NULL;
 
   int bsize_n = 0;
-  Block b = (Block)Malloc(BLOCK_SIZE);
+  Block b = NULL;
   n = getpeerNode(fd);
 
   //sending confirm
   sendInt(fd, blockchain->b_size);
   printf("Sent size of my blockchain: [%d]\n",blockchain->b_size);
 
-  //if my blockchain size is 0 don't sync
-  if(blockchain->b_size)
+  recvInt(fd, &bsize_n);
+  printf("Received his blockchain size: [%d]\n", bsize_n);
+
+
+  int diff = blockchain->b_size - bsize_n;
+  int level;
+
+  //if my blockchain is bigger send
+  if(diff > 0)
   {
-    recvInt(fd, &bsize_n);
-    printf("Received block to send: [%d]\n", bsize_n);
-    if (bsize_n >= 0)
+    level = 1;
+    printf("Sending block starting from %d-st block of blockchain\n", diff);
+    while(level <= diff)
     {
-      int level = (blockchain->b_size - bsize_n) + 1;
-      printf("Sending block starting from %d-st block of blockchain\n", level);
-      // ( blockchain_size - bsize_n  = livello da cui partire a mandare )
-      // e.g.: blockchain_size = 15, bsize_n = 3, level to search in tree is 13
-      while (level <= blockchain->b_size)
-      {
-        //search by level in tree
-        printf("Searchin by level\n");
-        b = searchByLevel(blockchain, level);
+      printf("Searchin by level\n");
+      b = searchByLevel(blockchain, level);
 
-        printf("Sending block %d\n",level);
-        sendBlock(fd, b);
+      printf("Sending block %d\n", level);
+      sendBlock(fd, b);
 
-        printf("Sent block %d\n",level);
-        visitBlock(b);
-        level++;
-      }
+      printf("Sent block %d\n", level);
+      visitBlock(b);
+      level++;
     }
-    else //received negative number
+  }
+  else // i must receive
+  {
+    level = 0;
+    printf("Receiving block \n");
+    while(level > diff)
     {
-      int diff = abs(bsize_n);
-      while (diff != 0)
-      {
-        recvBlock(fd, b);
+      recvBlock(fd, b);
+      visitBlock(b);
+      printf("Adding to mine blockchain\n");
+      addBlockToBlockchain(blockchain, b);
 
-        printf("Adding to mine blockchain\n");
-        addBlockToBlockchain(blockchain, b);
-
-        printf("Starting flooding\n");
-        //spread_block(b, fd);
-        diff--;
-      }
-      //send last block since his got same size as me
+      printf("Starting flooding\n");
+      //spread_block(b,fd);
+      level--; 
     }
   }
 
+  printf("*****BLOCKCHAIN SYNCED******\n");
+  
   pthread_mutex_lock(&mtx_tree);
     create_kid_to_node(connected_node, n);
   pthread_mutex_unlock(&mtx_tree);
@@ -337,9 +343,6 @@ static void* node_connection(void* arg)
   fd_open[fd] = 1;
   if(fd > max_fd)
     max_fd = fd;
-
-  printf("Connected with ->\t");
-  visitConnectedNode(n);
 
   pthread_exit(NULL);
 }
@@ -383,7 +386,7 @@ static void* receive_transaction(void *arg)
 
   //waiting rand sec
   printf("Waiting %d sec \n", b->randomtime);
-  sleep((unsigned int)b->randomtime);
+  //sleep((unsigned int)b->randomtime);
 
   printf("Block[%d]\n",b->n_block);
 
@@ -481,7 +484,7 @@ void n_routine()
   int *tid_args[BACKLOG];
   int tid_index = 0;
 
-  // used for switch case menu
+  // used for switch case men\nu
   int choice = 0;
   char line_buffer[16];
 
