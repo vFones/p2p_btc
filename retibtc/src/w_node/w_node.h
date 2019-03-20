@@ -19,10 +19,8 @@
 struct connected_node node_info;
 struct sockaddr_in node_address;
 
-int sockfd;
 
 struct connected_node wallet_info;
-struct sockaddr_in wallet_address;
 
 float wallet_amount;
 

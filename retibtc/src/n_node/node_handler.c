@@ -18,24 +18,15 @@ void visitBlock(void *arg)
 {
   if(arg == NULL)
     return;
+
   Block b = (Block)arg;
-  
-    if(!b->n_block)
-    printf("Block[GENESIS]\n");
+
+  if(!b->n_block)
+    printf("\tBlock [GENESIS]\n");
   else
   {
-    printf("Previous SHA: ");
-    for(int i=0;i<SHA256_DIGEST_LENGTH; i++)
-      printf("%02x", b->prev_SHA256[i]);
-    printf("\n");
-    
-    printf("SHA:");
-    for(int i=0; i<SHA256_DIGEST_LENGTH; i++)
-      printf("%02x", b->SHA256[i]);
-    printf("\n");
-
     Trns trns = b->info;
-    printf("block[%d] --> [%s:%hu -> %s:%hu] [%0.2f BTC] [%d] \n", \
+    printf("Block[%d] --> [%s:%hu -> %s:%hu] [%0.2f BTC] [%d] \n", \
       b->n_block, trns->src.address, trns->src.port, \
       trns->dst.address, trns->dst.port, trns->amount, trns->random);
   }
@@ -49,28 +40,6 @@ static Block create_block(Trns trns)
   b->n_block = blockchain->b_size+1;
   printf("Creating block with n_block = [%d] and blockchain size [%d]\n",b->n_block, blockchain->b_size);
   b->randomtime = 5+(rand()%11);
-
-  getLatestSHA256(blockchain, b->prev_SHA256);
-
-  // calculate hash of new block
-  unsigned char *tmpb_infoSHA256 = (unsigned char *)Malloc(SHA256_DIGEST_LENGTH);
-  SHA256(b->info, sizeof(b->info), tmpb_infoSHA256);
-
-  //create a string with previous hash + new tmp hash
-  char *tmpSHA256 = (char*)Malloc(SHA256_DIGEST_LENGTH * 2 + 2);
-
-  strncpy(tmpSHA256, (char *)b->prev_SHA256, SHA256_DIGEST_LENGTH);
-  strncpy(&tmpSHA256[SHA256_DIGEST_LENGTH], (char *)tmpb_infoSHA256, SHA256_DIGEST_LENGTH);
-  tmpSHA256[SHA256_DIGEST_LENGTH*2 + 1] = '\0';
-  
-  free(tmpb_infoSHA256);
-
-  // calculate hash of new string just created and assign to block
-  unsigned char *hash = (unsigned char *)Malloc(SHA256_DIGEST_LENGTH);
-  SHA256((unsigned char *)tmpSHA256, strlen(tmpSHA256), hash);
-  free(tmpSHA256);
-
-  strncpy((char *)b->SHA256, (char *)hash, SHA256_DIGEST_LENGTH);
 
   printf("Created block\n");
 

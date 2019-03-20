@@ -5,10 +5,7 @@ Blockchain create_blockchain()
   Block gen_block = (Block)Malloc(BLOCK_SIZE);
 
   printf("creating blockchain: genesis\n");
-  
-  memcpy(gen_block->prev_SHA256,"0000000000000000000000000000000000000000000000000000000000000000", SHA256_DIGEST_LENGTH);
-  memcpy(gen_block->SHA256, "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f", SHA256_DIGEST_LENGTH);
- 
+
   gen_block->n_block = 0;
   gen_block->randomtime = 15;
   gen_block->info = NULL;
@@ -28,14 +25,6 @@ static struct block getBlockFromNode(Tree node)
 {
   struct block b = *(struct block *) node->info;
   return b;
-}
-
-void getLatestSHA256(Blockchain blockchain, unsigned char *SHA)
-{
-  Block block = NULL;
-  block = (Block)blockchain->tail->info;
-  strncpy((char *)SHA, (char *)block->SHA256, SHA256_DIGEST_LENGTH);
-  printf("gotLatestSHA256...\n");
 }
 
 
@@ -125,11 +114,14 @@ bool compareBlockByInfo(void *x, void *y)
 {
   Block a = (Block)x;
   Block b = (Block)y;
-  if(a->SHA256 != NULL && b->SHA256 != NULL)
-    if( !(strcmp((char *)a->SHA256, (char *)b->SHA256)) )
-      return true;
+
+  if(a->n_block == b->n_block &&
+      a->randomtime == b->randomtime &&
+      compare_by_addr((Trns)a->info, (Trns) b->info) )
+    return true;
   return false;
 }
+
 
 
 int sendBlock(int fd, Block b)
