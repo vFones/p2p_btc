@@ -72,20 +72,30 @@ void addBlockToBlockchain(Blockchain blockchain, Block block)
   // if latest node of blockchain got siblings
   // use max_randtime to checkup the brother with max rand time
   // and then add block to him son;
+  printf("Aggiungo alla blockchain \n");
   if(!has_node_siblings(blockchain->tail)) //if tmp hasn't brothers
   {
+    printf("La tail non ha nessun fratello\n");
     if(compareBlockByInfo(blockchain->tail, block)) //if blocks got same hash
+    {
+      printf("Il blocco esiste già quindi creo blocco come fratello\n");
       new_son = create_sibling_to_node(blockchain->tail, block); // create new block as brother
+    }
     else
+    {
+      printf("Il blocco non esiste quindi creo come figlio\n");
       new_son = create_kid_to_node(blockchain->tail, block); // else normally add to tail
+    }
   }
   else// there are multitail
   {
+    printf("la tail ha fratelli quindi scelgo quello con max rand time\n");
     multitail = max_randtime(blockchain->tail);
     new_son = create_kid_to_node(multitail, block);
   }
   blockchain->tail = new_son;
   blockchain->b_size++;
+  printf("Aggiorno la tail e size blockchain [%d]\n", blockchain->b_size++);
 }
 
 // return block with that level in blockchain
