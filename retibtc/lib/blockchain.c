@@ -109,7 +109,7 @@ Block searchByLevel(Blockchain blockchain, int level)
   Block b = NULL;
   int i = 0;
 
-  for(i = 1; i <= level; i++)
+  for(i = 1; i < level; i++)
   {
     if(tmp->kids != NULL)
     {
