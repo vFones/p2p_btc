@@ -167,12 +167,12 @@ void connect_to_network()
 
       int diff = currentbchain_size - bsize_new_conn;
       int level;
-      fprintf(stderr,"Diff = his blockchain size [%d] - blockchain size[%d] = %d\n", bsize_new_conn, currentbchain_size, diff);
+      fprintf(stderr,"Diff = my size [%d] - his size[%d] = %d\n", currentbchain_size, bsize_new_conn, diff);
 
       //if his blockchain is bigger, receive
       if(diff > 0)
       {
-        fprintf(stderr, "Sending block starting from %d-st block of blockchain\n", currentbchain_size - diff);
+        fprintf(stderr, "Sending block starting from %d-st block of blockchain\n", (currentbchain_size - diff)+1);
         for(level = (currentbchain_size - diff)+1; level <= currentbchain_size; level++)
         {
           fprintf(stderr, "Searchin by level\n");
@@ -183,7 +183,6 @@ void connect_to_network()
 
           fprintf(stderr, "Sending block %d\n",level);
           sendBlock(fd, b);
-
           fprintf(stderr, "Sent block %d\n",level);
           visitBlock(b);
         }
@@ -193,7 +192,7 @@ void connect_to_network()
         level = 0;
         // ( blockchain_size - diff  = livello da cui partire a mandare )
         // e.g.: blockchain_size = 15, size = 3, level to search in tree is 12
-        while(level > diff)
+        for(level = 0; level > diff; level--)
         {
           recvBlock(fd, b);
           visitBlock(b);
@@ -210,7 +209,6 @@ void connect_to_network()
 
           fprintf(stderr, "Starting flooding\n");
           //spread_block(b,fd);
-          level--;
         }
       }
       fprintf(stderr, "*****BLOCKCHAIN SYNCED******\n");
