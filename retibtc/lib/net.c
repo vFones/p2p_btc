@@ -78,8 +78,9 @@ bool compare_by_addr(void *x, void *y)
 
 bool compare_by_fd(void *x, void *y)
 {
-  int a = *(int *) x, b = *(int *) y;
-  if(a == b)
+  node_t *a = (node_t *) x;
+  node_t *b = (node_t *) y;
+  if(a->fd == b->fd)
     return true;
   return false;
 }
@@ -89,13 +90,16 @@ int choose_node(use_node_t *new_node)
   char buffer[BUFFLEN];
 
   printf("\nInsert a valid IPv4 address: ");
+  fflush(stdin);
   scanf(" %s", buffer);
   strncpy(new_node->n.address, buffer, 32);
 
   printf("Insert a valid port address: ");
+  fflush(stdin);
   scanf(" %d", &new_node->n.port);
 
   printf("Are those info correct? Press [y] to retry, any other char to skip node\n");
+  fflush(stdin);
   scanf(" %c", &new_node->confirm);
   if(new_node->confirm == 'y')
     return 1;

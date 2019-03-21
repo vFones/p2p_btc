@@ -13,8 +13,8 @@ ssize_t Read(int fd, void *buff, size_t count)
         continue; /*if errno is not EINTR, print errno and return negative nread */
       else
       {
-        perror("full read");
-        exit(nread);
+        perror("wrapper read");
+        return nread;
       }
     }
     else
@@ -23,7 +23,7 @@ ssize_t Read(int fd, void *buff, size_t count)
 
     /*if you are here, you have actually read bytes*/
     nleft = nleft - nread;/* set pointer */
-    buff = buff + nread;/* set left to read */
+    buff = (char *)buff + nread;/* set left to read */
   }
   buff = 0;
   return nleft;
@@ -43,13 +43,13 @@ ssize_t Write(int fd, const void *buff, size_t count)
         continue; /*if errno is not EINTR, print errno and return negative nwritten */
       else
       {
-        perror("full write");
-        exit(nwritten);
+        perror("wrapper write");
+        return nwritten;
       }
     }
     /*if you are here, you have actually write bytes*/
-    buff = buff + nwritten; /* set pointer */
     nleft = nleft - nwritten;/* set left to write */
+    buff = (char *) buff + nwritten; /* set pointer */
   }
   return nleft;
 }

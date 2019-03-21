@@ -27,13 +27,21 @@
 
 short service_port;
 
+pthread_rwlock_t node_mtx;
 Tree connected_node;
 Tree connected_wallet;
 
+
+pthread_rwlock_t bchain_mtx;
+Blockchain blockchain;
+
 int exit_flag;
 
+pthread_mutex_t fd_mtx;
 int max_fd;
 int *fd_open;
+
+
 
 void n_routine();
 void sig_handler(int sig_no);
