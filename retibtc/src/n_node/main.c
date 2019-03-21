@@ -22,12 +22,7 @@ int main(int argc, char **argv)
     usage(MSG);
   free(flags);
 
-  // pthread_mutexattr_init(&mtx_fd_attr);
-  // pthread_mutexattr_setpshared(&mtx_fd_attr, PTHREAD_PROCESS_SHARED);
-  // pthread_mutex_init(&mtx_fd, &mtx_fd_attr);
-
   n_routine();
-
 }
 
 

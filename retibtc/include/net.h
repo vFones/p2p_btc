@@ -31,8 +31,9 @@ void fillAddressIPv4(struct sockaddr_in *socket_address, char *ip_address, int p
 void getsockNode(int fd, node_t *node);
 void getpeerNode(int fd, node_t *node);
 
-void visitConnectedNode(void *args);
-void visitConnectedWallet(void *args);
+void visit_node_list(node_t n);
+void visit_wallet_list(node_t n);
+
 bool compare_connected_node(void *x, void *y);
 
 bool compare_by_addr(void *x, void *y);

@@ -27,21 +27,27 @@
 
 short service_port;
 
+node_t *node_list;
+int node_list_size;
+
+node_t *wallet_list;
+int wallet_list_size;
+
 pthread_rwlock_t node_mtx;
-Tree connected_node;
-Tree connected_wallet;
+pthread_rwlockattr_t node_mtx_attr;
 
-
-pthread_rwlock_t bchain_mtx;
 Blockchain blockchain;
+pthread_rwlock_t bchain_mtx;
+pthread_rwlockattr_t bchain_mtx_attr;
 
 int exit_flag;
+int connection_closed;
+pthread_rwlock_t closed_flag;
+pthread_rwlockattr_t closed_flag_attr;
 
-pthread_mutex_t fd_mtx;
 int max_fd;
 int *fd_open;
-
-
+pthread_mutex_t fd_mtx;
 
 void n_routine();
 void sig_handler(int sig_no);

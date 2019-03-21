@@ -4,7 +4,7 @@ Blockchain create_blockchain()
 {
   Block gen_block = (Block)Malloc(BLOCK_SIZE);
 
-  printf("creating blockchain: genesis\n");
+  printf("\n**** Creating blockchain ****\n");
 
   gen_block->n_block = 0;
   gen_block->randomtime = 15;
@@ -16,6 +16,7 @@ Blockchain create_blockchain()
   blockchain->genesis->info = gen_block;
   blockchain->tail = blockchain->genesis;
 
+  printf("\n** genesis created **\n \n");
   return blockchain;
 }
 

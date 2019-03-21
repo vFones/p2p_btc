@@ -21,13 +21,15 @@ void visitBlock(void *arg)
   Block b = (Block)arg;
 
   if(!b->n_block)
-    printf("\tBlock [GENESIS]\n");
+  {
+    printf("Block [Genesis]\n");
+    return;
+  }
   else
   {
     trns_t trns = *(trns_t *)b->info;
-    printf("Block[%d] --> [%s:%hu -> %s:%hu] [%0.2f BTC] [%d] \n", \
-      b->n_block, trns.src.address, trns.src.port, \
-      trns.dst.address, trns.dst.port, trns.amount, trns.random);
+    printf("Block [%d] <--->", b->n_block);
+    visitTransaction(trns);
   }
 }
 
@@ -56,7 +58,7 @@ void spread_block(Block b, int fd)
   node_t n;
   Tree tmp = NULL;
 
-  tmp = connected_node->kids;
+  //tmp = connected_node->kids;
   n = *(node_t *)tmp->info;
 
   request_t macro = BLOCK_SPREAD;
@@ -76,7 +78,7 @@ void spread_block(Block b, int fd)
   /**send to the wallet if connected to me**/
 
   //reusing of Tree tmp and Conn_node n
-  tmp = connected_wallet->kids;
+  //tmp = connected_wallet->kids;
   n = *(node_t *)tmp->info;
 
   // info necessary to compare address of destinatary and mine wallets
@@ -105,16 +107,36 @@ void connect_to_network()
 {
   use_node_t new_conn;
   request_t macro = NODE_CONNECTION;
+  int canconnect = 0;
+  int fd;
   // try to connect to node_n node
   // TODO: check ip address and retry
   // TODO: check port
 
   choose_node(&new_conn);
 
+  pthread_rwlock_rdlock(&node_mtx);
+  for(int i = 0; i <= node_list_size; i++)
+  {
+    if( node_list[i].fd == 0 && node_list[i].port == 0)
+    {
+      canconnect = 1;
+      break;
+    }
+  }
+  pthread_rwlock_unlock(&node_mtx);
+
+  if(!canconnect)
+  {
+    fprintf(stderr, "No avaible space left... quitting connection");
+    return;
+  }
+
+
   if(new_conn.confirm == 'y')
   {
     int bsize_new_conn = 0;
-    int fd = Socket(AF_INET, SOCK_STREAM, 0);
+    fd = Socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in tmp;
 
     pthread_rwlock_rdlock(&bchain_mtx);
@@ -126,7 +148,6 @@ void connect_to_network()
     fillAddressIPv4(&tmp, new_conn.n.address, new_conn.n.port);
     new_conn.n.fd = fd;
 
-    //visitConnectedNode(&new_conn.n);
 
     if (connect(fd, (struct sockaddr *)&tmp, sizeof(struct sockaddr)) != -1)
     {
@@ -141,10 +162,10 @@ void connect_to_network()
       Write(fd, &currentbchain_size, sizeof(currentbchain_size));
       printf("Sent my blockchain size[%d]\n", currentbchain_size);
 
-      /*
+
       /*************************
        **   SYNC BLOCKCHAIN   **
-       ************************ /
+       ************************/
 
       int diff = currentbchain_size - bsize_new_conn;
       int level;
@@ -190,33 +211,56 @@ void connect_to_network()
           level--;
         }
       }
-      */
       printf("*****BLOCKCHAIN SYNCED******\n");
+
       /*************************
        * downloaded blockchain *
-       **  adding to my list  **
        *************************/
-
-      fd_open[fd] = 1;
-      if(fd > max_fd)
-        max_fd = fd;
-
-      node_t *node = (node_t *)Malloc(sizeof(node_t));
-      node->fd = new_conn.n.fd;
-      node->port = new_conn.n.port;
-      strncpy(node->address, new_conn.n.address, LEN_ADDRESS);
-
-      pthread_rwlock_wrlock(&node_mtx);
-      create_kid_to_node(connected_node, node);
-      pthread_rwlock_unlock(&node_mtx);
-
     }
     //failed connect
     else
+    {
       perror("connect_to_network");
+      return;
+    }
   }
   else
-    printf("Aborting...");
+  {
+    fprintf(stderr, "Aborting...\n");
+    return;
+  }
+
+  pthread_rwlock_wrlock(&closed_flag);
+  if(connection_closed)
+  {
+    connection_closed = 0;
+    pthread_rwlock_unlock(&closed_flag);
+    fprintf(stderr, "****Aborting.*****\n");
+    return;
+  }
+  else
+  {
+    pthread_rwlock_unlock(&closed_flag);
+
+    fd_open[fd] = 1;
+    if(fd > max_fd)
+      max_fd = fd;
+
+    pthread_rwlock_wrlock(&node_mtx);
+    for (int i = 0; i <= node_list_size; i++)
+    {
+      if(node_list[i].fd == 0 && node_list[i].port == 0)
+      {
+        node_list[node_list_size].fd = new_conn.n.fd;
+        node_list[node_list_size].port = new_conn.n.port;
+        strncpy(node_list[node_list_size].address, new_conn.n.address, LEN_ADDRESS);
+        node_list_size++;
+        break;
+      }
+    }
+    pthread_rwlock_unlock(&node_mtx);
+    printf("***** Successfull connected *****\n");
+  }
 }
 
 
@@ -225,54 +269,35 @@ void close_connection()
   use_node_t node;
   choose_node(&node);
   printf("Searching ->");
-  node_t *ptrnode = (node_t *)Malloc(sizeof(node_t));
+  int found = 0;
 
-  ptrnode->fd = node.n.fd;
-  ptrnode->port = node.n.port;
-  strncpy(ptrnode->address, node.n.address, LEN_ADDRESS);
-
-  visitConnectedNode(ptrnode);
+  visit_node_list(node.n);
 
   pthread_rwlock_wrlock(&node_mtx);
-  Tree found = remove_from_tree(connected_node, ptrnode, compare_by_addr);
+  for(int i = 0; i < node_list_size; i++)
+  {
+    if( node_list[i].fd == node.n.fd && node_list[i].port == node.n.port &&
+      !(strncmp(node_list[i].address, node.n.address, LEN_ADDRESS)))
+    {
+      node_list[i].fd = 0;
+      node_list[i].port = 0;
+      memset(&node_list[i].address, 0, sizeof(node_list[i].address));
+      found = 1;
+      break;
+    }
+  }
   pthread_rwlock_unlock(&node_mtx);
 
-  if(found != NULL)
+  if(found == 1)
   {
     printf("Found connected node with that IP:PORT\n");
     printf("******Closing connection*****\n");
-    //ptrnode = (node_t *)found->info;
-    //visitConnectedNode(ptrnode);
-
     fd_open[node.n.fd] = 0;
-
     close(node.n.fd);
-    free(ptrnode);
+    found = 0;
   }
   else
-    printf("Node not found\n");
-}
-
-
-void menu_case(int choice)
-{
-  switch(choice)
-  {
-    case 1:
-      connect_to_network();
-    break;
-
-    case 2:
-      close_connection();
-    break;
-
-    case 5:
-      printf("Cleaning and exiting\n");
-      exit(EXIT_SUCCESS);
-    default:
-      fprintf(stderr, "Choice is not processed, retry\n");
-    break;
-  }
+    printf("***** Node not found ******\n");
 }
 
 
@@ -281,12 +306,39 @@ void menu_case(int choice)
 ***********************/
 void* node_connection(void* arg)
 {
-  // adding node to my custom list after confirming
   int fd = *((int*)arg);
   free(arg);
+
   node_t n;
+  getpeerNode(fd, &n);
   int currentbchain_size = 0;
   int bsize_n = 0;
+  int canconnect= 0;
+
+  pthread_rwlock_rdlock(&node_mtx);
+  for(int i = 0; i <= node_list_size; i++)
+  {
+    if( node_list[i].fd == 0 && node_list[i].port == 0)
+    {
+      canconnect = 1;
+      break;
+    }
+  }
+  pthread_rwlock_unlock(&node_mtx);
+
+  if(!canconnect)
+  {
+    fd_open[fd] = 0;
+    close(fd);
+    fprintf(stderr, "***** got too many peers... quitting connection******");
+    pthread_exit(NULL);
+  }
+  else
+  {
+    fd_open[fd] = 1;
+    if(fd > max_fd)
+      max_fd = fd;
+  }
 
   Block b = (Block) Malloc(BLOCK_SIZE);
 
@@ -301,12 +353,11 @@ void* node_connection(void* arg)
   Write(fd, &currentbchain_size, sizeof(currentbchain_size));
   fprintf(stderr, "Sent size of my blockchain: [%d]\n", currentbchain_size);
 
-
   fprintf(stderr, "Ricevo un intero che è il size della SUA blockchain andando a sovrascriver -> %d\n",bsize_n);
   Read(fd, &bsize_n, sizeof(bsize_n));
   fprintf(stderr, "Received his blockchain size: [%d]\n", bsize_n);
 
-  /*
+
   int diff = currentbchain_size - bsize_n;
   printf("Diff = his blockchain size [%d] - blockchain size[%d] = %d\n", bsize_n, currentbchain_size, diff);
   
@@ -350,26 +401,42 @@ void* node_connection(void* arg)
       level--; 
     }
   }
-   */
   printf("*****BLOCKCHAIN SYNCED******\n");
 
-  getpeerNode(fd, &n);
 
-  node_t *node = (node_t *)Malloc(sizeof(node_t));
-  node->fd = n.fd;
-  node->port = n.port;
-  strncpy(node->address, n.address, LEN_ADDRESS);
+  pthread_rwlock_wrlock(&closed_flag);
+  if(connection_closed)
+  {
+    connection_closed = 0;
+    pthread_rwlock_unlock(&closed_flag);
+    printf("*****Exiting from thread that manages connections.*****\n");
+    fprintf(stderr, "****Aborting.*****\n");
+    pthread_exit(NULL);
+  }
+  else
+  {
+    pthread_rwlock_unlock(&closed_flag);
 
-  fd_open[fd] = 1;
-  if(fd > max_fd)
-    max_fd = fd;
+    fd_open[fd] = 1;
+    if(fd > max_fd)
+      max_fd = fd;
 
-  pthread_rwlock_wrlock(&node_mtx);
-  create_kid_to_node(connected_node, node);
-  pthread_rwlock_unlock(&node_mtx);
-
-  printf("Exiting from thread that manages connections...\n");
-  pthread_exit(NULL);
+    pthread_rwlock_wrlock(&node_mtx);
+    for (int i = 0; i <= node_list_size; i++)
+    {
+      if(node_list[i].fd == 0 && node_list[i].port == 0)
+      {
+        node_list[node_list_size].fd = n.fd;
+        node_list[node_list_size].port = n.port;
+        strncpy(node_list[node_list_size].address, n.address, LEN_ADDRESS);
+        node_list_size++;
+        break;
+      }
+    }
+    pthread_rwlock_unlock(&node_mtx);
+    printf("*****Exiting from thread that manages connections.*****\n");
+    pthread_exit(NULL);
+  }
 }
 
 
@@ -377,27 +444,74 @@ void* wallet_connection(void *arg)
 {
   int fd = *((int*)arg);
   free(arg);
+  printf("*********getting fd new wallet connection \n*********");
+
+  int canconnect = 0;
   node_t n;
   getpeerNode(fd, &n);
+
+
+  pthread_rwlock_rdlock(&node_mtx);
+  for(int i = 0; i <= wallet_list_size; i++)
+  {
+    if( wallet_list[i].fd == 0 && wallet_list[i].port == 0)
+    {
+      canconnect = 1;
+      break;
+    }
+  }
+  pthread_rwlock_unlock(&node_mtx);
+
+  if(!canconnect)
+  {
+    fd_open[fd] = 0;
+    close(fd);
+    fprintf(stderr, "***** got too many peers... quitting connection******");
+    pthread_exit(NULL);
+  }
+  else
+  {
+    fd_open[fd] = 1;
+    if(fd > max_fd)
+      max_fd = fd;
+  }
+
   int confirm = 1;
   Write(fd, &confirm, sizeof(confirm));
 
-  node_t *wallet = (node_t *)Malloc(sizeof(node_t));
-  wallet->fd = n.fd;
-  wallet->port = n.port;
-  strncpy(wallet->address, n.address, LEN_ADDRESS);
+  pthread_rwlock_wrlock(&closed_flag);
+  if(connection_closed)
+  {
+    connection_closed = 0;
+    pthread_rwlock_unlock(&closed_flag);
+    printf("*****Exiting from thread that manages connections.*****\n");
+    fprintf(stderr, "****Aborting.*****\n");
+    pthread_exit(NULL);
+  }
+  else
+  {
+    pthread_rwlock_unlock(&closed_flag);
 
-  pthread_rwlock_wrlock(&node_mtx);
-    create_kid_to_node(connected_wallet, wallet);
-  pthread_rwlock_unlock(&node_mtx);
+    fd_open[fd] = 1;
+    if(fd > max_fd)
+      max_fd = fd;
 
-
-  fd_open[fd] = 1;
-  if(fd > max_fd)
-    max_fd = fd;
-
-  printf("fd new wallet connection: %d\n",fd);
-  pthread_exit(NULL);
+    pthread_rwlock_wrlock(&node_mtx);
+    for (int i = 0; i <= wallet_list_size; i++)
+    {
+      if( wallet_list[i].fd == 0 && wallet_list[i].port == 0)
+      {
+        wallet_list[wallet_list_size].fd = n.fd;
+        wallet_list[wallet_list_size].port = n.port;
+        strncpy(wallet_list[wallet_list_size].address, n.address, LEN_ADDRESS);
+        wallet_list_size++;
+        break;
+      }
+    }
+    pthread_rwlock_unlock(&node_mtx);
+    printf("*****Exiting from thread that manages connections.*****\n");
+    pthread_exit(NULL);
+  }
 }
 
 
@@ -405,12 +519,14 @@ void* receive_transaction(void *arg)
 {
   int fd = *((int*)arg);
   free(arg);
-  trns_t trns;
-  int confirm = 1;
+
   // receiv transaction from w_node
+  trns_t trns;
   Read(fd, &trns, sizeof(trns));
+
   printf("package from %s:%d\n", trns.src.address, trns.src.port);
   // send confirm
+  int confirm = 1;
   Write(fd, &confirm, sizeof(confirm));
 
   //creating block with transaction
@@ -424,18 +540,22 @@ void* receive_transaction(void *arg)
 
   //if created block is with already old(received another block)
   pthread_rwlock_rdlock(&bchain_mtx);
-  while(b->n_block <= blockchain->b_size)
+  if (b->n_block <= blockchain->b_size)
   {
     pthread_rwlock_unlock(&bchain_mtx);
     printf("Recreating block\n");
     b = create_block(trns);
   }//recreate
+  else
+    pthread_rwlock_unlock(&bchain_mtx);
 
   printf("Adding to blockchain\n");
 
   pthread_rwlock_wrlock(&bchain_mtx);
   addBlockToBlockchain(blockchain, b);
   pthread_rwlock_unlock(&bchain_mtx);
+
+  printf("Added to blockchain\n\n");
 
   //spread_block();
   pthread_exit(NULL);
@@ -472,7 +592,7 @@ void n_routine()
   srand(time(NULL));
 
   //sig_action and masks
-  /*struct sigaction sig_act;
+  struct sigaction sig_act;
   sig_act.sa_handler = sig_handler;
   sig_act.sa_flags = 0;
 
@@ -483,12 +603,7 @@ void n_routine()
   sigemptyset(&new_mask);
   sigemptyset(&old_mask);
   sigaddset(&new_mask, SIGINT);
-  sigprocmask(SIG_SETMASK, NULL, &old_mask);*/
-
-  //mutex dinamically allocated
-  pthread_rwlock_init(&bchain_mtx, NULL);
-  pthread_mutex_init(&fd_mtx, NULL);
-  pthread_rwlock_init(&node_mtx, NULL);
+  sigprocmask(SIG_SETMASK, NULL, &old_mask);
 
   // main FDs to monitor
   int list_fd = 0;
@@ -505,12 +620,24 @@ void n_routine()
   Bind(list_fd, (struct sockaddr *)&my_server_addr);
   Listen(list_fd, BACKLOG);
 
-  // creating list for connected node;
-  connected_node = new_node(NULL, NULL, NULL);
-  // Creating list for connected wallet;
-  connected_wallet = new_node(NULL, NULL, NULL);
-  // creating blockchain;
+  //mutex dinamically allocated
+  pthread_rwlock_init(&bchain_mtx, NULL);
+  pthread_rwlockattr_init(&bchain_mtx_attr);
   blockchain = create_blockchain();
+
+  pthread_rwlock_init(&node_mtx, NULL);
+  pthread_rwlockattr_init(&node_mtx_attr);
+  node_list_size = 0;
+  wallet_list_size = 0;
+
+  pthread_rwlock_init(&closed_flag, NULL);
+  pthread_rwlockattr_init(&closed_flag_attr);
+  connection_closed = 0;
+
+  node_list = (node_t *)calloc(BACKLOG, sizeof(node_t));
+  wallet_list = (node_t *)calloc(BACKLOG, sizeof(node_t));
+
+  // creating blockchain;
 
   // used for select management and monitor
   int i_fd = 0, n_ready = 0;
@@ -529,6 +656,7 @@ void n_routine()
   char line_buffer[16];
 
   //settin max_fd as list_fd and monitoring that on fd_open table
+  pthread_mutex_init(&fd_mtx, NULL);
   fd_open = (int *)calloc(FD_SETSIZE, sizeof(int));
 
   // setting list_fd as max
@@ -538,10 +666,10 @@ void n_routine()
   while (1)
   {
     // critic section used to control flag
-    //sigprocmask(SIG_BLOCK, &new_mask, NULL);
+    sigprocmask(SIG_BLOCK, &new_mask, NULL);
 
-    //if(exit_flag == 1)
-    //  break;
+    if(exit_flag == 1)
+      break;
 
     FD_ZERO(&fdset);
     FD_SET(STDIN_FILENO, &fdset);
@@ -553,22 +681,40 @@ void n_routine()
 
 
     //system("clear");
-    printf("\tChoose:\n1) connect to peers;\n2) disconnect from peer\n5) quit\n");
+
+    printf("\n* * * * * Connected N_NODE * * * * *\n");
     pthread_rwlock_rdlock(&node_mtx);
-    visit_tree(connected_node, visitConnectedNode);
-    printf("\n");
-    visit_tree(connected_wallet, visitConnectedWallet);
+    for(int i=0; i < node_list_size; i++)
+      visit_node_list(node_list[i]);
+    //visit_tree(connected_node, visitConnectedNode);
     pthread_rwlock_unlock(&node_mtx);
+
     printf("\n");
+
+    printf("* * * * * Connected W_NODE * * * * *\n");
+    pthread_rwlock_unlock(&node_mtx);
+    for(int i=0; i < wallet_list_size; i++)
+      visit_wallet_list(wallet_list[i]);
+    //visit_tree(connected_wallet, visitConnectedWallet);
+    pthread_rwlock_unlock(&node_mtx);
+
+    printf("\n");
+
+    printf("* * * * * BLOCKCHAIN * * * * *\n");
     pthread_rwlock_rdlock(&bchain_mtx);
     visit_tree(blockchain->genesis, visitBlock);
     pthread_rwlock_unlock(&bchain_mtx);
 
-    n_ready = select(max_fd + 1, &fdset, NULL, NULL, NULL); //reset
+    printf("\n");
+
+    printf("\tChoose:\n1) connect to peers;\n2) disconnect from peer\n5) quit\n");
+    fprintf(stderr, ">_ ");
+    fflush(stdin);
+    n_ready = pselect(max_fd + 1, &fdset, NULL, NULL, NULL, &old_mask); //reset
 
     if(n_ready < 0 && errno == EINTR)
     {
-      //sigprocmask(SIG_UNBLOCK, &new_mask, NULL); // unlock if signal's != SIGINT
+      sigprocmask(SIG_UNBLOCK, &new_mask, NULL); // unlock if signal's != SIGINT
       continue;
     }
 
@@ -580,7 +726,7 @@ void n_routine()
     }
 
 
-    //sigprocmask(SIG_UNBLOCK, &new_mask, NULL);
+    sigprocmask(SIG_UNBLOCK, &new_mask, NULL);
     // exit critic section unlocking signal
 
 
@@ -593,9 +739,22 @@ void n_routine()
       fflush(stdin);
       fgets(line_buffer, 16, stdin);
       choice = atoi(line_buffer);
-      menu_case(choice);
+      switch(choice)
+      {
+        case 1:
+          connect_to_network();
+          break;
+        case 2:
+          close_connection();
+          break;
+        case 5:
+          printf("Cleaning and exiting\n");
+          exit(EXIT_SUCCESS);
+        default:
+          fprintf(stderr, "Choice is not processed: wrong input\n");
+          break;
+      }
     }
-
 
     /***************************
         Socket connections
@@ -608,7 +767,7 @@ void n_routine()
       if((accept_fd = accept(list_fd, NULL, NULL)) < 0)
       {
         perror("accept");
-        exit(1);
+        exit(EXIT_FAILURE);
       }
       setsockopt(accept_fd, SOL_SOCKET, SO_KEEPALIVE, &keepalive, sizeof(keepalive));
 
@@ -620,7 +779,6 @@ void n_routine()
         max_fd = accept_fd;
     }
     i_fd = list_fd;
-
     tid_index = 0;
     while (n_ready)
     {
@@ -633,7 +791,7 @@ void n_routine()
       if(FD_ISSET(i_fd, &fdset))
       {
         n_ready--;
-        fflush(stdin);
+
         response = Read(i_fd, &request, sizeof(request));
 
         /************************************
@@ -641,29 +799,43 @@ void n_routine()
          ************************************/
         if(response != 0)
         {
-          fprintf(stderr, "Closed connection\n");
+          pthread_rwlock_wrlock(&closed_flag);
+          connection_closed = 1;
+          pthread_rwlock_unlock(&closed_flag);
+
+          fprintf(stderr, "******* Peer has closed connection ******\n");
           //closing
           fd_open[i_fd] = 0;
           close(i_fd);
 
-          Tree found = NULL;
-          node_t *tmp_node = (node_t *)Malloc(sizeof(node_t));
-          tmp_node->fd = i_fd;
+          pthread_rwlock_wrlock(&node_mtx);
+          for(int i = 0; i < node_list_size; i++)
+          {
+            if( node_list[i].fd == i_fd )
+            {
+              node_list[i].fd = 0;
+              node_list[i].port = 0;
+              memset(&node_list[i].address, 0, sizeof(node_list[i].address));
+              break;
+            }
+          }
 
-          found = remove_from_tree(connected_node, tmp_node, compare_by_fd);
-          if(found != NULL)
-            free(found);
-
-          found = remove_from_tree(connected_wallet, tmp_node, compare_by_fd);
-          if(found != NULL)
-            free(found);
-
+          for(int i = 0; i < wallet_list_size; i++)
+          {
+            if( wallet_list[i].fd == i_fd )
+            {
+              wallet_list[i].fd = 0;
+              wallet_list[i].port = 0;
+              memset(&wallet_list[i].address, 0, sizeof(wallet_list[i].address));
+              break;
+            }
+          }
+          pthread_rwlock_unlock(&node_mtx);
 
           //updating max fd with the last open in fd_open
           if(max_fd == i_fd)
           {
-            while (fd_open[--i_fd] == 0)
-              ;
+            while (fd_open[--i_fd] == 0);
             max_fd = i_fd;
             break;
           }
@@ -677,19 +849,19 @@ void n_routine()
         switch (request)
         {
           case NODE_CONNECTION:
-            fprintf(stderr,"*********Creating thread for node_connection*********\n");
+            fprintf(stderr,"********* Creating thread for node_connection *********\n");
             pthread_create(&tid[tid_index], NULL, node_connection, arg);
             break;
           case WALLET_CONNECTION:
-            fprintf(stderr,"********Creating thread for wallet_connection*********\n");
+            fprintf(stderr,"******** Creating thread for wallet_connection *********\n");
             pthread_create(&tid[tid_index], NULL, wallet_connection, arg);
             break;
           case TRANSACTION:
-            fprintf(stderr,"*******Creating thread for receive_transaction********\n");
+            fprintf(stderr,"******* Creating thread for receive_transaction ********\n");
             pthread_create(&tid[tid_index], NULL, receive_transaction, arg);
             break;
           case BLOCK_SPREAD:
-            fprintf(stderr,"*******Creating thread for receive_block (spreading)*******\n");
+            fprintf(stderr,"******* Creating thread for receive_block (spreading) *******\n");
             pthread_create(&tid[tid_index], NULL, receive_block, arg);
             break;
           default:
@@ -699,23 +871,32 @@ void n_routine()
         tid_index++;
       }
     }
+    //not waiting threads so I can exit with C-c and kill everybody
   }
 
-  printf("Closing node_handler\n");
-  for (i_fd = 0; i_fd <= max_fd; i_fd++)
+  printf("Closing node\n");
+  for (int i = 0; i <= max_fd; i++)
   {
-    if (fd_open[i_fd])
+    if (fd_open[i])
     {
-      printf("Closing fd_open[i_fd]: %d", fd_open[i_fd]);
-      close(fd_open[i_fd]);
+      printf("Closing fd_open[i_fd]: %d\n", i);
+      close(i);
     }
   }
 
-  free(fd_open);
+  //free (blockchain);
 
-  pthread_rwlock_destroy(&bchain_mtx);
+  free(fd_open);
+  free(node_list);
+  free(wallet_list);
+
   pthread_mutex_destroy(&fd_mtx);
+  pthread_rwlock_destroy(&bchain_mtx);
+  pthread_rwlockattr_destroy(&bchain_mtx_attr);
   pthread_rwlock_destroy(&node_mtx);
+  pthread_rwlockattr_destroy(&node_mtx_attr);
+  pthread_rwlock_destroy(&closed_flag);
+  pthread_rwlockattr_destroy(&closed_flag_attr);
 
   for(int j=0; j < tid_index;  j++)
     pthread_kill(tid[j], SIGKILL);

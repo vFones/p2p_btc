@@ -21,7 +21,6 @@ node_t node;
 node_t wallet;
 float wallet_amount;
 
-
 void wallet_routine();
 
 #endif

@@ -50,19 +50,23 @@ void getpeerNode(int fd, node_t *node)
 }
 
 
-void visitConnectedNode(void *args)
+void visit_node_list(node_t n)
 {
-  node_t *n = (node_t *)args;
-  printf("Node = %s:%d in fd [%d]\n", n->address, n->port, n->fd);
+  if(n.port == 0 && n.fd == 0)
+    return;
+  else
+    printf("Node = %s:%d in fd [%d]\n", n.address, n.port, n.fd);
 }
 
 
-void visitConnectedWallet(void *args)
-{
-  node_t *w = (node_t *) args;
-  printf("Wallet = %s:%d in fd [%d]\n", w->address, w->port, w->fd);
-}
 
+void visit_wallet_list(node_t n)
+{
+  if(n.port == 0 && n.fd == 0)
+    return;
+  else
+    printf("Wallet = %s:%d in fd [%d]\n", n.address, n.port, n.fd);
+}
 
 bool compare_by_addr(void *x, void *y)
 {
