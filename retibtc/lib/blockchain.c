@@ -4,7 +4,7 @@ Blockchain create_blockchain()
 {
   Block gen_block = (Block)Malloc(BLOCK_SIZE);
 
-  printf("\n**** Creating blockchain ****\n");
+  fprintf(stderr, "\n**** Creating blockchain ****\n");
 
   gen_block->n_block = 0;
   gen_block->randomtime = 15;
@@ -16,7 +16,7 @@ Blockchain create_blockchain()
   blockchain->genesis->info = gen_block;
   blockchain->tail = blockchain->genesis;
 
-  printf("\n** genesis created **\n \n");
+  fprintf(stderr, "\n** genesis created **\n \n");
   return blockchain;
 }
 
@@ -73,30 +73,30 @@ void addBlockToBlockchain(Blockchain blockchain, Block block)
   // if latest node of blockchain got siblings
   // use max_randtime to checkup the brother with max rand time
   // and then add block to him son;
-  printf("\n\nAggiungo alla blockchain \n");
+  fprintf(stderr, "\n\nAggiungo alla blockchain \n");
   if(!has_node_siblings(blockchain->tail)) //if tmp hasn't brothers
   {
-    printf("La tail non ha nessun fratello\n");
+    fprintf(stderr, "La tail non ha nessun fratello\n");
     if(compareBlockByInfo(blockchain->tail, block)) //if blocks got same hash
     {
-      printf("Il blocco esiste già quindi creo blocco come fratello\n");
+      fprintf(stderr, "Il blocco esiste già quindi creo blocco come fratello\n");
       new_son = create_sibling_to_node(blockchain->tail, block); // create new block as brother
     }
     else
     {
-      printf("Il blocco non esiste quindi creo come figlio\n");
+      fprintf(stderr, "Il blocco non esiste quindi creo come figlio\n");
       new_son = create_kid_to_node(blockchain->tail, block); // else normally add to tail
     }
   }
   else// there are multitail
   {
-    printf("la tail ha fratelli quindi scelgo quello con max rand time\n");
+    fprintf(stderr,"la tail ha fratelli quindi scelgo quello con max rand time\n");
     multitail = max_randtime(blockchain->tail);
     new_son = create_kid_to_node(multitail, block);
   }
   blockchain->tail = new_son;
   blockchain->b_size++;
-  printf("Aggiorno la tail e size blockchain [%d]\n\n", blockchain->b_size);
+  fprintf(stderr,"Aggiorno la tail e size blockchain [%d]\n\n", blockchain->b_size);
 }
 
 // return block with that level in blockchain
@@ -115,7 +115,7 @@ Block searchByLevel(Blockchain blockchain, int level)
   if (has_node_siblings(tmp))
     tmp = max_randtime(tmp);
 
-  printf("Level: %d, found at level: %d", level, i);
+  fprintf(stderr,"Level: %d, found at level: %d", level, i);
   
   b = (Block) tmp->info;
   return b;

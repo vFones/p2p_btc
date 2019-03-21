@@ -15,14 +15,14 @@ static void create_transaction(int choice)
     case 1:
       if(wallet_amount == 0)
       {
-        printf("\nyour balance is 0. In order to make a transaction you must first have cryptocurrecy\n");
+        fprintf(stderr, "\nyour balance is 0. In order to make a transaction you must first have cryptocurrecy\n");
         break;
       }
       use_node_t new_conn;
       choose_node(&new_conn);
       if(new_conn.confirm == 'y')
       {
-        printf("Insert a valid amount to send: \n");
+        fprintf(stderr,"Insert a valid amount to send: \n");
         fflush(stdin);
         scanf(" %s", buffer);
         cryptocurrecy = strtof(buffer, NULL);
@@ -31,7 +31,7 @@ static void create_transaction(int choice)
           fprintf(stderr, "Cannot send more than your actual funds.\n**** Retry *****\n");
         else
         {
-          printf("Are you sure want to make this payment? [y]\n");
+          fprintf(stderr, "Are you sure want to make this payment? [y]\n");
           fflush(stdin);
           scanf(" %c", &c);
 
@@ -40,7 +40,7 @@ static void create_transaction(int choice)
             t = fillTransaction(wallet, new_conn.n, cryptocurrecy);
             Write(node.fd, &macro, sizeof(macro));
             Write(node.fd, t, TRNS_SIZE);
-            printf("\nwait confirm from peer\n");
+            fprintf(stderr,"\nwait confirm from peer\n");
             Read(node.fd, &confirm, sizeof(confirm));
 
             if(!confirm)
@@ -51,11 +51,11 @@ static void create_transaction(int choice)
           //else returning to main menu;
         }
       }
-      printf("\nReturning to main menu.\n");
+      fprintf(stderr,"\nReturning to main menu.\n");
       break;
 
     case 2:
-      printf("How many cryptocurrecy do you want to \'mine\'?\n");
+      fprintf(stderr,"How many cryptocurrecy do you want to \'mine\'?\n");
       fflush(stdin);
       scanf(" %s", buffer);
       cryptocurrecy = strtof(buffer, NULL);
@@ -67,14 +67,14 @@ static void create_transaction(int choice)
       Write(node.fd, &macro, sizeof(macro));
       Write(node.fd, t, TRNS_SIZE);
 
-      printf("\nwait confirm from peer...\n");
+      fprintf(stderr,"\nwait confirm from peer...\n");
       Read(node.fd, &confirm, sizeof(confirm));
 
       if(!confirm)
         fprintf(stderr, "Transaction not validated, aborting operation.\n");
       else
       {
-        printf("Refreshing wallet amount.\n");
+        fprintf(stderr,"Refreshing wallet amount.\n");
         wallet_amount += cryptocurrecy;
       }
       break;
@@ -86,7 +86,7 @@ static void create_transaction(int choice)
 static void print_menu()
 {
   //system("clear");
-  printf("\n\nWallet address: %s:[%d]\nWallet balance: %5.2f \n \
+  fprintf(stderr,"\n\nWallet address: %s:[%d]\nWallet balance: %5.2f \n \
     1) Make an exchange\n \
     2) Buy more cryptocurrecy\n \
     5) Exit...\n \
@@ -138,7 +138,7 @@ void wallet_routine()
           create_transaction(2);
           break;
         case 5:
-          printf("Cleaning and exiting\n");
+          fprintf(stderr,"Cleaning and exiting\n");
           exit(EXIT_SUCCESS);
         default:
           fprintf(stderr, "Error: can't recognize request. Retry.\n");
@@ -164,8 +164,8 @@ void wallet_routine()
         {
           trns_t t;
           Read(node.fd, &t, sizeof(t));
-          printf("\n\n * Received new transaction from %s:%d\n", t.dst.address, t.dst.port);
-          printf("* Updating new amount\n");
+          fprintf(stderr,"\n\n * Received new transaction from %s:%d\n", t.dst.address, t.dst.port);
+          fprintf(stderr,"* Updating new amount\n");
           // TODO:
           sleep(2);
         }
