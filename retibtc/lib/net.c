@@ -55,7 +55,7 @@ void visit_node_list(node_t n)
   if(n.port == 0 && n.fd == 0)
     return;
   else
-    printf("Node = %s:%d in fd [%d]\n", n.address, n.port, n.fd);
+    fprintf(stderr,"Node = %s:%d in fd [%d]\n", n.address, n.port, n.fd);
 }
 
 
@@ -65,7 +65,7 @@ void visit_wallet_list(node_t n)
   if(n.port == 0 && n.fd == 0)
     return;
   else
-    printf("Wallet = %s:%d in fd [%d]\n", n.address, n.port, n.fd);
+    fprintf(stderr,"Wallet = %s:%d in fd [%d]\n", n.address, n.port, n.fd);
 }
 
 bool compare_by_addr(void *x, void *y)
@@ -93,23 +93,23 @@ int choose_node(use_node_t *new_node)
 {
   char buffer[BUFFLEN];
 
-  printf("\nInsert a valid IPv4 address: ");
+  fprintf(stderr, "\nInsert a valid IPv4 address: ");
   fflush(stdin);
   scanf(" %s", buffer);
   strncpy(new_node->n.address, buffer, 32);
 
-  printf("Insert a valid port address: ");
+  fprintf(stderr, "Insert a valid port address: ");
   fflush(stdin);
   scanf(" %d", &new_node->n.port);
 
-  printf("Are those info correct? Press [y] to retry, any other char to skip node\n");
+  fprintf(stderr,"Are those info correct? Press [y] to retry, any other char to skip node\n");
   fflush(stdin);
   scanf(" %c", &new_node->confirm);
   if(new_node->confirm == 'y')
     return 1;
   else
   {
-    printf("\n***********\nInfo not correct\n***********\n");
+    fprintf(stderr, "\n***********\nInfo not correct\n***********\n");
     return 0;
   }
 }

@@ -30,7 +30,7 @@ void sig_handler(int sig_no)
 {
   if(sig_no == SIGINT)
   {
-    printf("\nCaptured C-c, closing [%d].\n", getpid());
+    fprintf(stderr, "\nCaptured C-c, closing [%d].\n", getpid());
     exit_flag = 1;
   }
 }
