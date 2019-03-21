@@ -16,6 +16,7 @@ Blockchain create_blockchain()
   blockchain->genesis->info = gen_block;
   blockchain->tail = blockchain->genesis;
 
+
   fprintf(stderr, "\n** genesis created **\n \n");
   return blockchain;
 }
@@ -116,7 +117,7 @@ Block searchByLevel(Blockchain blockchain, int level)
     tmp = max_randtime(tmp);
 
   fprintf(stderr,"Level: %d, found at level: %d", level, i);
-  
+
   b = (Block) tmp->info;
   return b;
 }

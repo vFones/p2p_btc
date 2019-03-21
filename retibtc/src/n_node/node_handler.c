@@ -1,9 +1,6 @@
 #include "n_node.h"
 #include "../../include/blockchain.h"
 
-
-
-
 //TODO: move file in a pragmatic way
 
 //TODO: CLEAN printf
@@ -69,7 +66,7 @@ void spread_block(Block b, int fd)
     if( n.fd != fd) //execpt the one who sent to me
     {
       Write(n.fd, &macro, sizeof(macro));
-      fprintf(stderr, "Sending block to %s:%hu\n", n.address, n.port);
+      fprintf(stderr, "Sending block to %s:%d\n", n.address, n.port);
       sendBlock(n.fd, b);
     }
     tmp = tmp->kids;
@@ -90,7 +87,7 @@ void spread_block(Block b, int fd)
     {
       macro = TRANSACTION;
       Write(n.fd, &macro, sizeof(macro));
-      fprintf(stderr,"Sending block to %s:%hu\n", n.address, n.port);
+      fprintf(stderr,"Sending block to %s:%d\n", n.address, n.port);
       sendBlock(n.fd, b);
       break;
     }
@@ -171,7 +168,7 @@ void connect_to_network()
       int diff = currentbchain_size - bsize_new_conn;
       int level;
       fprintf(stderr,"Diff = his blockchain size [%d] - blockchain size[%d] = %d\n", bsize_new_conn, currentbchain_size, diff);
-      
+
       //if his blockchain is bigger, receive
       if(diff > 0)
       {
@@ -205,6 +202,10 @@ void connect_to_network()
 
           pthread_rwlock_wrlock(&bchain_mtx);
           addBlockToBlockchain(blockchain, b);
+          pthread_rwlock_unlock(&bchain_mtx);
+
+          pthread_rwlock_rdlock(&bchain_mtx);
+          visit_tree(blockchain->genesis, visitBlock);
           pthread_rwlock_unlock(&bchain_mtx);
 
           fprintf(stderr, "Starting flooding\n");
@@ -361,7 +362,7 @@ void* node_connection(void* arg)
 
   int diff = currentbchain_size - bsize_n;
   fprintf(stderr,"Diff = his blockchain size [%d] - blockchain size[%d] = %d\n", bsize_n, currentbchain_size, diff);
-  
+
   int level;
 
   //if my blockchain is bigger send
@@ -397,9 +398,13 @@ void* node_connection(void* arg)
       addBlockToBlockchain(blockchain, b);
       pthread_rwlock_unlock(&bchain_mtx);
 
+      pthread_rwlock_rdlock(&bchain_mtx);
+      visit_tree(blockchain->genesis, visitBlock);
+      pthread_rwlock_unlock(&bchain_mtx);
+      
       //printf("Starting flooding\n");
       //spread_block(b,fd);
-      level--; 
+      level--;
     }
   }
   fprintf(stderr, "*****BLOCKCHAIN SYNCED******\n");
@@ -836,7 +841,7 @@ void n_routine()
           pthread_rwlock_wrlock(&closed_flag);
           connection_closed = 0;
           pthread_rwlock_unlock(&closed_flag);
-          
+
           //updating max fd with the last open in fd_open
           if(max_fd == i_fd)
           {
