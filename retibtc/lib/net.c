@@ -19,40 +19,34 @@ void fillAddressIPv4(struct sockaddr_in *socket_address, char *ip_address, int p
 }
 
 
-node_t getsockNode(int fd)
+void getsockNode(int fd, node_t *node)
 {
   struct sockaddr_in tmpaddr;
   socklen_t lentmpaddr = sizeof(tmpaddr);
   //Conn_node node = (Conn_node)Malloc(SIZE_NODE);
-  node_t node;
   if(getsockname(fd, (struct sockaddr *) &tmpaddr, &lentmpaddr) == -1)
   {
     perror("getsockname -> Node:");
     exit(EXIT_FAILURE);
   }
-  strncpy(node.address, inet_ntoa(tmpaddr.sin_addr), LEN_ADDRESS);
-  node.port = ntohs(tmpaddr.sin_port);
-  node.fd = fd;
-
-  return node;
+  strncpy(node->address, inet_ntoa(tmpaddr.sin_addr), LEN_ADDRESS);
+  node->port = ntohs(tmpaddr.sin_port);
+  node->fd = fd;
 }
 
 
-node_t getpeerNode(int fd)
+void getpeerNode(int fd, node_t *node)
 {
   struct sockaddr_in tmpaddr;
   socklen_t lentmpaddr = sizeof(tmpaddr);
-  node_t node;
   if(getpeername(fd, (struct sockaddr *) &tmpaddr, &lentmpaddr) == -1)
   {
     perror("getpeername -> Node:");
-    return node;
+    exit(EXIT_FAILURE);
   }
-  strncpy(node.address, inet_ntoa(tmpaddr.sin_addr), LEN_ADDRESS);
-  node.port = ntohs(tmpaddr.sin_port);
-  node.fd = fd;
-
-  return node;
+  strncpy(node->address, inet_ntoa(tmpaddr.sin_addr), LEN_ADDRESS);
+  node->port = ntohs(tmpaddr.sin_port);
+  node->fd = fd;
 }
 
 

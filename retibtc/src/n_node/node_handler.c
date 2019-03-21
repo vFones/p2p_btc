@@ -1,6 +1,7 @@
 #include "n_node.h"
 #include "../../include/blockchain.h"
 
+
 Blockchain blockchain;
 
 static pthread_mutex_t mtx_tree;
@@ -116,9 +117,10 @@ static void connect_to_network()
 
     Block b = (Block)Malloc(BLOCK_SIZE);
 
-    fillAddressIPv4(&tmp, new_conn.n.address ,new_conn.n.port);
+    fillAddressIPv4(&tmp, new_conn.n.address, new_conn.n.port);
     new_conn.n.fd = fd;
-    visitConnectedNode(&new_conn.n);
+
+    //visitConnectedNode(&new_conn.n);
 
     if (connect(fd, (struct sockaddr *)&tmp, sizeof(struct sockaddr)) != -1)
     {
@@ -187,7 +189,7 @@ static void connect_to_network()
       if(fd > max_fd)
         max_fd = fd;
 
-      node_t *node = (node_t *)Malloc(sizeof(node_t *));
+      node_t *node = (node_t *)Malloc(sizeof(node_t));
       node->fd = new_conn.n.fd;
       node->port = new_conn.n.port;
       strncpy(node->address, new_conn.n.address, LEN_ADDRESS);
@@ -210,18 +212,24 @@ static void close_connection()
   use_node_t node;
   choose_node(&node);
   printf("Searching ->");
-  visitConnectedNode(&node.n);
+  node_t *ptrnode = (node_t *)Malloc(sizeof(node_t));
 
+  ptrnode->fd = node.n.fd;
+  ptrnode->port = node.n.port;
+  strncpy(ptrnode->address, node.n.address, LEN_ADDRESS);
+
+  visitConnectedNode(ptrnode);
   Tree found = remove_from_tree(connected_node, (void*)&node.n, compare_by_addr);
 
   if(found != NULL)
   {
     printf("Found connected node with that IP:PORT\n");
     printf("******Closing connection*****\n");
-    node.n = *(node_t *)found->info;
-    visitConnectedNode(&node.n);
+    ptrnode = (node_t *)found->info;
+    visitConnectedNode(ptrnode);
     fd_open[node.n.fd] = 0;
     close(node.n.fd);
+    free(ptrnode);
   }
   else
     printf("Node not found\n");
@@ -261,7 +269,7 @@ static void* node_connection(void* arg)
 
   int bsize_n = 0;
   Block b = (Block) Malloc(BLOCK_SIZE);
-  n = getpeerNode(fd);
+  getpeerNode(fd, &n);
 
   //sending confirm
   fprintf(stderr, "\nInvio un intero che è il size della mia blockchain\n");
@@ -274,6 +282,8 @@ static void* node_connection(void* arg)
 
 
   int diff = blockchain->b_size - bsize_n;
+  printf("Diff = his blockchain size [%d] - blockchain size[%d] = %d\n", bsize_n, blockchain->b_size, diff);
+  
   int level;
 
   //if my blockchain is bigger send
@@ -315,7 +325,7 @@ static void* node_connection(void* arg)
   if(fd > max_fd)
     max_fd = fd;
 
-  node_t *node = (node_t *)Malloc(sizeof(node_t *));
+  node_t *node = (node_t *)Malloc(sizeof(node_t));
   node->fd = n.fd;
   node->port = n.port;
   strncpy(node->address, n.address, LEN_ADDRESS);
@@ -333,7 +343,7 @@ static void* wallet_connection(void *arg)
   //auth
   int fd = *(int*)arg;
   node_t n;
-  n = getpeerNode(fd);
+  getpeerNode(fd, &n);
   int confirm = 1;
   Write(fd, &confirm, sizeof(confirm));
 
@@ -613,15 +623,19 @@ void n_routine()
         switch (request)
         {
           case NODE_CONNECTION:
+            fprintf(stderr,"Creating thread for node_connection\n");
             pthread_create(&tid[tid_index], NULL, node_connection, (void *)tid_args[tid_index]);
             break;
           case WALLET_CONNECTION:
+            fprintf(stderr,"Creating thread for wallet_connection\n");
             pthread_create(&tid[tid_index], NULL, wallet_connection, (void *)tid_args[tid_index]);
             break;
           case TRANSACTION:
+            fprintf(stderr,"Creating thread for receive_transaction\n");
             pthread_create(&tid[tid_index], NULL, receive_transaction, (void *)tid_args[tid_index]);
             break;
           case BLOCK_SPREAD:
+            fprintf(stderr,"Creating thread for receive_block (spreading)\n");
             pthread_create(&tid[tid_index], NULL, receive_block, (void *)tid_args[tid_index]);
             break;
           default:
@@ -630,8 +644,6 @@ void n_routine()
         }
         tid_index++;
       }
-      for(int i=0; i<tid_index; i++)
-        pthread_join(tid[tid_index], NULL);
     }
   }
 

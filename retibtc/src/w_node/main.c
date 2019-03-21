@@ -41,7 +41,7 @@ int main(int argc, char **argv)
 
   node.fd = Socket(AF_INET, SOCK_STREAM, 0);
   Connect(node.fd, (struct sockaddr *)&node_address);
-  wallet = getsockNode(node.fd);
+  getsockNode(node.fd, &wallet);
   request_t macro = WALLET_CONNECTION;
   Write(node.fd, &macro, sizeof(macro));
 
