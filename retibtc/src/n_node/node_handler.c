@@ -27,17 +27,18 @@ void visitBlock(void *arg)
   }
   else
   {
-    trns_t trns = *(trns_t *)b->info;
+    Trns trns = b->info;
     printf("Block [%d] <--->", b->n_block);
     visitTransaction(trns);
   }
 }
 
 
-Block create_block(trns_t trns)
+Block create_block(Trns trns)
 {
   Block b = (Block)Malloc(BLOCK_SIZE);
-  b->info = &trns;
+
+  b->info = trns;
 
   pthread_rwlock_rdlock(&bchain_mtx);
   b->n_block = blockchain->b_size+1;
@@ -521,10 +522,10 @@ void* receive_transaction(void *arg)
   free(arg);
 
   // receiv transaction from w_node
-  trns_t trns;
-  Read(fd, &trns, sizeof(trns));
+  Trns trns = (Trns)Malloc(TRNS_SIZE);
+  Read(fd, trns, TRNS_SIZE);
 
-  printf("package from %s:%d\n", trns.src.address, trns.src.port);
+  printf("package from %s:%d\n", trns->src.address, trns->src.port);
   // send confirm
   int confirm = 1;
   Write(fd, &confirm, sizeof(confirm));
@@ -692,7 +693,7 @@ void n_routine()
     printf("\n");
 
     printf("* * * * * Connected W_NODE * * * * *\n");
-    pthread_rwlock_unlock(&node_mtx);
+    pthread_rwlock_rdlock(&node_mtx);
     for(int i=0; i < wallet_list_size; i++)
       visit_wallet_list(wallet_list[i]);
     //visit_tree(connected_wallet, visitConnectedWallet);

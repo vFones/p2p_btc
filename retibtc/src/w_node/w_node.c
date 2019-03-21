@@ -7,7 +7,7 @@ static void create_transaction(int choice)
   float cryptocurrecy = 0.0;
   char buffer[32], c = 'n';
   int confirm = 0;
-  trns_t t;
+  Trns t = (Trns)Malloc(TRNS_SIZE);
   request_t macro = TRANSACTION;
 
   switch(choice)
@@ -37,9 +37,9 @@ static void create_transaction(int choice)
 
           if(c == 'y')
           {
-            fillTransaction(wallet, new_conn.n, cryptocurrecy, &t);
+            t = fillTransaction(wallet, new_conn.n, cryptocurrecy);
             Write(node.fd, &macro, sizeof(macro));
-            Write(node.fd, &t, sizeof(t));
+            Write(node.fd, t, TRNS_SIZE);
             printf("\nwait confirm from peer\n");
             Read(node.fd, &confirm, sizeof(confirm));
 
@@ -60,12 +60,12 @@ static void create_transaction(int choice)
       scanf(" %s", buffer);
       cryptocurrecy = strtof(buffer, NULL);
 
-      fillTransaction(wallet, wallet, cryptocurrecy, &t);
+      t = fillTransaction(wallet, wallet, cryptocurrecy);
 
       visitTransaction(t);
 
       Write(node.fd, &macro, sizeof(macro));
-      Write(node.fd, &t, sizeof(t));
+      Write(node.fd, t, TRNS_SIZE);
 
       printf("\nwait confirm from peer...\n");
       Read(node.fd, &confirm, sizeof(confirm));
@@ -164,14 +164,14 @@ void wallet_routine()
         {
           trns_t t;
           Read(node.fd, &t, sizeof(t));
-          printf("Received new transaction from %s:%d\n", t.dst.address, t.dst.port);
-          printf("Updating new amount\n");
+          printf("\n\n * Received new transaction from %s:%d\n", t.dst.address, t.dst.port);
+          printf("* Updating new amount\n");
           // TODO:
           sleep(2);
         }
         else
         {
-          fprintf(stderr, "Request received is not known...\n");
+          fprintf(stderr, "\n\n * Request received is not known...\n");
           sleep(2);
         }
         print_menu();

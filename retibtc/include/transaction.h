@@ -20,7 +20,7 @@ typedef struct transaction{
 typedef struct transaction* Trns;
 #define TRNS_SIZE sizeof(struct transaction)
 
-void fillTransaction(node_t src, node_t dst, float amount, trns_t *t);
-void visitTransaction(trns_t);
+Trns fillTransaction(node_t src, node_t dst, float amount);
+void visitTransaction(Trns );
 
 #endif

@@ -1,7 +1,8 @@
 #include "../include/transaction.h"
 
-void fillTransaction( node_t src, node_t dst, float amount, trns_t *t)
+Trns fillTransaction( node_t src, node_t dst, float amount)
 {
+  Trns t = (Trns)Malloc(TRNS_SIZE);
   strncpy(t->src.address, src.address, LEN_ADDRESS);
   t->src.port = src.port;
 
@@ -10,10 +11,11 @@ void fillTransaction( node_t src, node_t dst, float amount, trns_t *t)
 
   t->amount = amount;
   t->random = rand()%1000;
+  return t;
 }
 
-void visitTransaction(trns_t t)
+void visitTransaction(trns_t *t)
 {
-  printf("Transaction [%d]: [%s:%d] --> [%s:%d] [%0.2F]", t.random, t.src.address, t.src.port, \
-    t.dst.address, t.dst.port, t.amount);
+  printf("Transaction [%d]: [%s:%d] --> [%s:%d] [%0.2F]", t->random, t->src.address, t->src.port, \
+    t->dst.address, t->dst.port, t->amount);
 }
