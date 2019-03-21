@@ -142,8 +142,9 @@ int sendBlock(int fd, Block b)
     perror("sendBlock");
     return -1;
   }
-  trns_t t = *(trns_t *)b->info;
-  Write(fd, &t, sizeof(t));
+  Trns t = NULL;
+  t = b->info;
+  Write(fd, t, TRNS_SIZE);
 
   return 0;
 }
@@ -156,8 +157,9 @@ int recvBlock(int fd, Block b)
     perror("sendBlock");
     return -1;
   }
-  trns_t t = *(trns_t *)b->info;
-  Read(fd, &t, sizeof(t));
+  Trns t = (Trns)Malloc(TRNS_SIZE);
+  Read(fd, t, TRNS_SIZE);
+  b->info = t;
 
   return 0;
 }

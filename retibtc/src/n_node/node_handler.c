@@ -833,6 +833,10 @@ void n_routine()
           }
           pthread_rwlock_unlock(&node_mtx);
 
+          pthread_rwlock_wrlock(&closed_flag);
+          connection_closed = 0;
+          pthread_rwlock_unlock(&closed_flag);
+          
           //updating max fd with the last open in fd_open
           if(max_fd == i_fd)
           {
