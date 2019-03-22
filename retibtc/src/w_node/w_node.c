@@ -87,11 +87,12 @@ static void print_menu()
 {
   //system("clear");
   fprintf(stderr,"\n\nWallet address: %s:[%d]\nWallet balance: %5.2f \n \
-    1) Make an exchange\n \
-    2) Buy more cryptocurrecy\n \
-    5) Exit...\n \
-    (press ENTER to activate)\n",\
-    wallet.address, wallet.port, wallet_amount);
+  1) Make an exchange\n \
+  2) Buy more cryptocurrecy\n \
+  5) Exit...\n \
+  (press ENTER to activate)\n",\
+  wallet.address, wallet.port, wallet_amount);
+  fprintf(stderr,">_ ");
 }
 
 
@@ -126,7 +127,6 @@ void wallet_routine()
     *******************/
   	if (FD_ISSET(STDIN_FILENO, &fset))
     {
-  	  fprintf(stderr,">_ ");
       fgets(line_buffer, 16, stdin);
       choice = atoi(line_buffer);
       switch(choice)

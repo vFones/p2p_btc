@@ -33,4 +33,6 @@ void sig_handler(int sig_no)
     fprintf(stderr, "\nCaptured C-c, closing [%d].\n", getpid());
     exit_flag = 1;
   }
+  if(sig_no == SIGUSR1)
+    wakeup = 1;
 }

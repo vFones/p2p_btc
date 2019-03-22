@@ -56,10 +56,7 @@ int Accept(int listfd, struct sockaddr *cli_add)
   int conn_fd;
   socklen_t len = sizeof(*cli_add);
 
-  while ( ( (conn_fd = accept(listfd, (struct sockaddr *) cli_add, &len) )  < 0) \
-    && (errno == EINTR));
-
-  if(conn_fd < 0)
+  if( (conn_fd = accept(listfd, (struct sockaddr *) cli_add, &len)) < 0)
   {
     perror("Accept");
     exit(EXIT_FAILURE);

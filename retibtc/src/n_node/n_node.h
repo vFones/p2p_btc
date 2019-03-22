@@ -42,13 +42,14 @@ pthread_rwlock_t bchain_mtx;
 pthread_rwlockattr_t bchain_mtx_attr;
 
 int exit_flag;
+int wakeup;
 int connection_closed;
 pthread_rwlock_t closed_flag;
 pthread_rwlockattr_t closed_flag_attr;
 
 int max_fd;
 int *fd_open;
-pthread_mutex_t fd_mtx;
+pthread_rwlock_t fd_mtx;
 
 void n_routine();
 void sig_handler(int sig_no);
