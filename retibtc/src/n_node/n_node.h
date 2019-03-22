@@ -25,8 +25,8 @@
 
 #define MSG "Usage: ./n_node -p <PORT TO EXPOSE>\n"
 
-short service_port;
 struct sockaddr_in my_server_addr;
+node_t node_server;
 
 node_t *node_list;
 int node_list_size;
@@ -42,13 +42,16 @@ pthread_rwlock_t bchain_mtx;
 pthread_rwlockattr_t bchain_mtx_attr;
 
 int exit_flag;
-int wakeup;
-int connection_closed;
 pthread_rwlock_t closed_flag;
 pthread_rwlockattr_t closed_flag_attr;
 
+pthread_t *tid;
+int tid_index;
+pthread_mutex_t t_index_mtx;
+pthread_attr_t t_detached;
+
+
 int max_fd;
-int *fd_open;
 pthread_rwlock_t fd_mtx;
 
 void n_routine();
