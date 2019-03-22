@@ -85,13 +85,13 @@ static void create_transaction(int choice)
 
 static void print_menu()
 {
-  //system("clear");
-  fprintf(stderr,"\n\nWallet address: %s:[%d]\nWallet balance: %5.2f \n \
-  1) Make an exchange\n \
-  2) Buy more cryptocurrecy\n \
-  5) Exit...\n \
-  (press ENTER to activate)\n",\
-  wallet.address, wallet.port, wallet_amount);
+  system("clear");
+  fprintf(stderr,"\n\nWallet address: %s:[%d] connected to -> %s:[%d]\nWallet balance: %5.2f\n", \
+    wallet.address, wallet.port, node.address, node.port , wallet_amount);
+  fprintf(stderr, "1) Make an exchange\n");
+  fprintf(stderr, "2) Buy more cryptocurrecy\n");
+  fprintf(stderr, "5) Exit...\n");
+  fprintf(stderr, "press ENTER to activate)\n");
   fprintf(stderr,">_ ");
 }
 
@@ -151,7 +151,7 @@ void wallet_routine()
     ***************************/
   	if (FD_ISSET(node.fd, &fset))
     {
-  	  int error = Read(node.fd, &request, sizeof(request));
+  	  ssize_t error = Read(node.fd, &request, sizeof(request));
 
       if(error)
       {

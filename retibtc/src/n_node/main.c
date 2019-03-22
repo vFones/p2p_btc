@@ -10,7 +10,7 @@ int main(int argc, char **argv)
     switch(opt)
     {
       case 'p':
-        service_port = (unsigned short)atoi(optarg);
+        node_server.port = (unsigned short)atoi(optarg);
         flags[0] = 1;
         break;
       default:
@@ -33,6 +33,4 @@ void sig_handler(int sig_no)
     fprintf(stderr, "\nCaptured C-c, closing [%d].\n", getpid());
     exit_flag = 1;
   }
-  if(sig_no == SIGUSR1)
-    wakeup = 1;
 }

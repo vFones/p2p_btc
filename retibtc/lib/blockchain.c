@@ -90,11 +90,12 @@ void addBlockToBlockchain(Blockchain blockchain, Block block)
   {
     if(compareBlockByInfo(tmp, new_block)) //if blocks got same hash
     {
-       last = create_sibling_to_node(tmp, new_block); // create new block as brother
+      last = create_sibling_to_node(tmp, new_block); // create new block as brother
     }
     else
     {
       last = create_kid_to_node(tmp, new_block); // else normally add to tail
+      blockchain->b_size++;
     }
   }
   else// there are multitail
@@ -102,8 +103,8 @@ void addBlockToBlockchain(Blockchain blockchain, Block block)
     fprintf(stderr,"Found more tails... choosing the one with max random time.\n");
     multitail = max_randtime(tmp);
     last = create_kid_to_node(multitail, block);
+    blockchain->b_size++;
   }
-  blockchain->b_size++;
   blockchain->tail = last;
   fprintf(stderr, "New block [%d] in blockchain with size -> %d \n", block->n_block, blockchain->b_size);
 }
