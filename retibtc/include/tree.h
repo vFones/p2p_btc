@@ -29,10 +29,10 @@ bool add_kid_to_node(Tree t, Tree to_add);
 bool has_node_kids(Tree t);
 bool has_node_siblings(Tree t);
 
-Tree search_in_tree(Tree t, void *node, COMPARE_TREE_INFO);
+Tree search_in_tree(Tree t, void *info, COMPARE_TREE_INFO);
 void visit_tree(Tree t, VISIT_TREE_INFO);
 
-Tree remove_from_tree(Tree t, void *node, COMPARE_TREE_INFO);
+Tree remove_from_tree(Tree t, void *info, COMPARE_TREE_INFO);
 
 // to implement
 bool compare_tree_info(void* x, void* y);

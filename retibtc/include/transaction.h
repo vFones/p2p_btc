@@ -21,6 +21,6 @@ typedef struct transaction* Trns;
 #define TRNS_SIZE sizeof(struct transaction)
 
 Trns fillTransaction(node_t src, node_t dst, float amount);
-void visitTransaction(Trns );
+void visitTransaction(Trns);
 
 #endif

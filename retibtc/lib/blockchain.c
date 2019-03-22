@@ -39,6 +39,7 @@ static Tree max_randtime(Tree node)
   found = node;
   tmp = node;
 
+  fprintf(stderr, "Calculcating max random time \n");
   while(tmp->siblings != NULL)
   {
     n_info = getBlockFromNode(tmp); // A
@@ -70,13 +71,15 @@ static Tree max_randtime(Tree node)
 void addBlockToBlockchain(Blockchain blockchain, Block block)
 {
   Tree multitail = NULL;
-  Tree tmp = blockchain->genesis;
+  Tree tmp = blockchain->tail;
+  Tree last = NULL;
+  Block new_block = (Block)Malloc(BLOCK_SIZE);
+  memcpy(new_block, block, BLOCK_SIZE);
 
-
-  while(tmp->kids != NULL)
+  /*while(tmp->kids != NULL)
   {
-    if (has_node_siblings(tmp))
-      tmp = max_randtime(tmp);
+  if (has_node_siblings(tmp))
+    tmp = max_randtime(tmp);
     tmp = tmp->kids;
   }
 
@@ -84,21 +87,27 @@ void addBlockToBlockchain(Blockchain blockchain, Block block)
   // use max_randtime to checkup the brother with max rand time
   // and then add block to him son;
 
+*/
   if(!has_node_siblings(tmp)) //if tmp hasn't brothers
   {
-    if(compareBlockByInfo(tmp, block)) //if blocks got same hash
-      create_sibling_to_node(tmp, block); // create new block as brother
+    if(compareBlockByInfo(tmp, new_block)) //if blocks got same hash
+    {
+       last = create_sibling_to_node(tmp, new_block); // create new block as brother
+    }
     else
-      create_kid_to_node(tmp, block); // else normally add to tail
+    {
+      last = create_kid_to_node(tmp, new_block); // else normally add to tail
+    }
   }
   else// there are multitail
   {
     fprintf(stderr,"Found more tails... choosing the one with max random time.\n");
     multitail = max_randtime(tmp);
-    create_kid_to_node(multitail, block);
+    last = create_kid_to_node(multitail, block);
   }
   blockchain->b_size++;
-  fprintf(stderr, "New block in blockchain\n");
+  blockchain->tail = last;
+  fprintf(stderr, "New block [%d] in blockchain with size -> %d \n", block->n_block, blockchain->b_size);
 }
 
 

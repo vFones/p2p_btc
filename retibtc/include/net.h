@@ -28,11 +28,11 @@ typedef struct node_to_use{
 
 void fillAddressIPv4(struct sockaddr_in *socket_address, char *ip_address, int port);
 
-void getsockNode(int fd, node_t *node);
-void getpeerNode(int fd, node_t *node);
+void getsockNode(int fd, node_t *);
+void getpeerNode(int fd, node_t *);
 
-void visit_node_list(node_t n);
-void visit_wallet_list(node_t n);
+void visit_node_list(node_t);
+void visit_wallet_list(node_t);
 
 bool compare_connected_node(void *x, void *y);
 
