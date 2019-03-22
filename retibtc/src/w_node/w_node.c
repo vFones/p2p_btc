@@ -164,14 +164,15 @@ void wallet_routine()
         {
           trns_t t;
           Read(node.fd, &t, sizeof(t));
-          fprintf(stderr,"\n\n * Received new transaction from %s:%d\n", t.dst.address, t.dst.port);
-          fprintf(stderr,"* Updating new amount\n");
-          // TODO:
+          fprintf(stderr,"\nReceived new transaction from %s:%d\n", t.src.address, t.src.port);
+          visitTransaction(&t);
+          fprintf(stderr,"* Updating new amount *\n");
+          wallet_amount = wallet_amount + t.amount;
           sleep(2);
         }
         else
         {
-          fprintf(stderr, "\n\n * Request received is not known...\n");
+          fprintf(stderr, "\n* Request received is not known...\n");
           sleep(2);
         }
         print_menu();

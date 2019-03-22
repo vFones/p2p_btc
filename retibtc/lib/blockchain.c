@@ -23,12 +23,18 @@ Blockchain create_blockchain()
 
 
 //used to get block from a specific node
-static struct block getBlockFromNode(Tree node)
+static struct block getblockFromNode(Tree node)
 {
   struct block b = *(struct block *) node->info;
   return b;
 }
 
+Block getBlockFromNode(Tree node)
+{
+  Block b = (Block)Malloc(BLOCK_SIZE);
+  b = node ->info;
+  return b;
+}
 
 static Tree max_randtime(Tree node)
 {
@@ -42,8 +48,8 @@ static Tree max_randtime(Tree node)
   fprintf(stderr, "Calculcating max random time \n");
   while(tmp->siblings != NULL)
   {
-    n_info = getBlockFromNode(tmp); // A
-    sibl_info = getBlockFromNode(tmp->siblings); // B
+    n_info = getblockFromNode(tmp); // A
+    sibl_info = getblockFromNode(tmp->siblings); // B
     // A > B
     if(n_info.randomtime > sibl_info.randomtime)
     {
@@ -76,18 +82,10 @@ void addBlockToBlockchain(Blockchain blockchain, Block block)
   Block new_block = (Block)Malloc(BLOCK_SIZE);
   memcpy(new_block, block, BLOCK_SIZE);
 
-  /*while(tmp->kids != NULL)
-  {
-  if (has_node_siblings(tmp))
-    tmp = max_randtime(tmp);
-    tmp = tmp->kids;
-  }
-
   // if latest node of blockchain got siblings
   // use max_randtime to checkup the brother with max rand time
   // and then add block to him son;
 
-*/
   if(!has_node_siblings(tmp)) //if tmp hasn't brothers
   {
     if(compareBlockByInfo(tmp, new_block)) //if blocks got same hash
@@ -144,10 +142,13 @@ bool compareBlockByInfo(void *x, void *y)
 {
   Block a = (Block)x;
   Block b = (Block)y;
+  Trns t_a = a->info;
+  Trns t_b = b->info;
 
-  if(a->n_block == b->n_block &&
+  if( a->n_block == b->n_block &&
       a->randomtime == b->randomtime &&
-      compare_by_addr(a->info, b->info) )
+      compare_by_addr(&t_a->src, &t_b->src) &&
+      compare_by_addr(&t_a->dst, &t_b->src))
     return true;
   return false;
 }

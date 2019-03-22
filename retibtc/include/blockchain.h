@@ -2,6 +2,7 @@
 #define BLOCKCHAIN_H
 
 #include "io.h"
+#include "net.h"
 #include "tree.h"
 #include "transaction.h"
 #include <openssl/sha.h>
@@ -9,6 +10,7 @@
 struct block{
   int n_block;
   int randomtime;
+  node_t creator;
   void *info;
 };
 typedef struct block* Block;
@@ -26,6 +28,7 @@ Blockchain create_blockchain();
 
 //handling multitail
 void addBlockToBlockchain(Blockchain blockchain, Block block);
+Block getBlockFromNode(Tree);
 
 Block searchByLevel(Blockchain blockchain, int level);
 

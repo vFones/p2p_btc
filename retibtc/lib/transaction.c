@@ -10,12 +10,12 @@ Trns fillTransaction( node_t src, node_t dst, float amount)
   t->dst.port = dst.port;
 
   t->amount = amount;
-  t->random = rand()%1000;
+  t->random = rand()%10000; // arbitrary number
   return t;
 }
 
 void visitTransaction(trns_t *t)
 {
-  fprintf(stderr, " Transaction [%d]: [%s:%d] --> [%s:%d] [%0.2F]\n", t->random, t->src.address, t->src.port, \
+  fprintf(stderr, "[Random INT]->{%d} [src]://%s:%d --> [dst]://%s:%d [BTC]->%0.2F\n", t->random, t->src.address, t->src.port, \
     t->dst.address, t->dst.port, t->amount);
 }

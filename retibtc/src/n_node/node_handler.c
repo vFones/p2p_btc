@@ -20,7 +20,7 @@ void visitBlock(void *arg)
   else
   {
     Trns trns = b->info;
-    fprintf(stderr,"Block [%d] <--->", b->n_block);
+    fprintf(stderr,"Block [%d] <---> ", b->n_block);
     visitTransaction(trns);
   }
 }
@@ -38,6 +38,8 @@ Block create_block(Trns trns)
   pthread_rwlock_unlock(&bchain_mtx);
 
   b->randomtime = 5+(rand()%11);
+  strncpy(b->creator.address, "0.0.0.0", LEN_ADDRESS);
+  b->creator.port = service_port;
 
   fprintf(stderr,"Created block\n");
 
@@ -45,51 +47,81 @@ Block create_block(Trns trns)
 }
 
 
-void spread_block(Block b, int fd)
+int spread_block(Block b, int fd, bool first)
 {
   //send to everyone exept the one who sended to me (control via fd)
   node_t n;
-  Tree tmp = NULL;
+  getpeerNode(fd, &n);
+  request_t macro;
 
-  //tmp = connected_node->kids;
-  n = *(node_t *)tmp->info;
+  Trns t = b->info;
 
-  request_t macro = BLOCK_SPREAD;
-  //scroll list and sent to everyone
-  while(tmp->kids != NULL)
+  char mypublicip[LEN_ADDRESS];
+  strncpy(mypublicip, "0.0.0.0", LEN_ADDRESS);
+
+  fprintf(stderr, "Blocco RICEVUTO DA %s:%d\n", n.address, n.port);
+
+
+  // before start flooding i check if i created the block with flag first
+  // if i received the block stop propagation if i'm the creator
+  if(!first)
   {
-    if( n.fd != fd) //execpt the one who sent to me
+    if(!(strncmp(b->creator.address, mypublicip, LEN_ADDRESS)) && (b->creator.port == service_port))
     {
-      Write(n.fd, &macro, sizeof(macro));
-      fprintf(stderr, "Sending block to %s:%d\n", n.address, n.port);
-      sendBlock(n.fd, b);
+      fprintf(stderr, "I created the block, no need to resend\n");
+      return 0;
     }
-    tmp = tmp->kids;
-    n = *(node_t *)tmp->info;
   }
 
+  // WALLET PROPAGATION
+
+  fprintf(stderr, "Wallet propagation\n");
+  macro = TRANSACTION;
   /**send to the wallet if connected to me**/
-
-  //reusing of Tree tmp and Conn_node n
-  //tmp = connected_wallet->kids;
-  n = *(node_t *)tmp->info;
-
-  // info necessary to compare address of destinatary and mine wallets
-  trns_t dstwallet = *(trns_t *)b->info;
-  while(tmp->kids != NULL)
+  for(int i = 0; i <= wallet_list_size; i++)
   {
-    if(compare_by_addr(&n, &dstwallet.dst))
+    // if wallet exist ( != 0 ) in my table
+    if( (wallet_list[i].fd != 0 && wallet_list[i].port != 0) )
     {
-      macro = TRANSACTION;
-      Write(n.fd, &macro, sizeof(macro));
-      fprintf(stderr,"Sending block to %s:%d\n", n.address, n.port);
-      sendBlock(n.fd, b);
-      break;
+      //if wallet is different from who sended to me
+      if( wallet_list[i].port != n.port && !(strncmp(wallet_list[i].address, n.address, LEN_ADDRESS)) )
+      {
+        if( wallet_list[i].port == t->dst.port  && (strncmp(wallet_list[i].address, t->dst.address, LEN_ADDRESS) == 0) ) // different from destinatary
+        {
+          Write(wallet_list[i].fd, &macro, sizeof(macro));
+          fprintf(stderr, "Iteration [%d] Sending block to %s:%d\n", i, wallet_list[i].address, wallet_list[i].port);
+          //waiting confirm;
+          Write(wallet_list[i].fd, t, TRNS_SIZE);
+        }
+      }
+      else
+      {
+        fprintf(stderr, "Me lo ha inviato lui, non lo mando indietro %s:%d\n",wallet_list[i].address,wallet_list[i].port);
+      }
     }
-    tmp = tmp->kids;
-    n = *(node_t *)tmp->info;
   }
+
+
+  fprintf(stderr, "NODE PROPAGATION\n");
+  macro  = BLOCK_SPREAD;
+  //scroll list and sent to everyone
+  for(int i = 0; i <= node_list_size; i++)
+  {
+    if(node_list[i].fd != 0 && node_list[i].port != 0)
+    {
+      if(node_list[i].port != n.port && !(strncmp(node_list[i].address, n.address, LEN_ADDRESS)) )
+      //other controls ?
+      {
+        Write(node_list[i].fd, &macro, sizeof(macro));
+        fprintf(stderr, "iteration [%d] Sending block to %s:%d\n", i, node_list[i].address, node_list[i].port);
+        //waiting confirm
+        sendBlock(node_list[i].fd, b);
+      }
+    }
+  }
+
   fprintf(stderr,"Flooding ended\n");
+  return 0;
 }
 
 
@@ -217,10 +249,35 @@ void connect_to_network()
 
           diff++;
           free(b);
-          //fprintf(stderr, "Starting flooding\n");
-          //spread_block(b,fd);
+          fprintf(stderr, "Starting flooding\n");
+          spread_block(b, fd, false);
         }
       }
+      else // DIFF = 0, must check integrity of blockchain
+      {
+        if(blockchain->b_size > 0)
+        {
+          int response = 0;
+          fprintf(stderr, "Got same blockchain number, send last block as check\n");
+          Block b = getBlockFromNode(blockchain->tail);
+          sendBlock(fd, b);
+
+          Read(fd, &response, sizeof(response));
+          if(response)
+          {
+            Block new = (Block)Malloc(BLOCK_SIZE);
+            recvBlock(fd, new);
+
+            pthread_rwlock_wrlock(&bchain_mtx);
+            addBlockToBlockchain(blockchain, new);
+            pthread_rwlock_unlock(&bchain_mtx);
+          }
+          else
+            fprintf(stderr, "Fine sync\n");
+        }
+      }
+
+
       fprintf(stderr, "*****BLOCKCHAIN SYNCED******\n");
 
       /*************************
@@ -433,12 +490,43 @@ void node_connection(void* arg)
 
         diff++;
         free(b);
-      //printf("Starting flooding\n");
-      //spread_block(b,fd);
+      printf("Starting flooding\n");
+      spread_block(b, fd, false);
     }
   }
-  fprintf(stderr, "***** BLOCKCHAIN SYNCED ******\n");
+  else // DIFF = 0, must check integrity of blockchain
+  {
+    if(blockchain->b_size > 0)
+    {
+      int response = 0;
+      fprintf(stderr, "Got same blockchain number, recv his block and check\n");
+      Block last = getBlockFromNode(blockchain->tail);
 
+      Block new = (Block)Malloc(BLOCK_SIZE);
+      recvBlock(fd, new);
+
+      if (compareBlockByInfo(new, last))
+      {
+        fprintf(stderr, "Got same latest block. Sending 0 as response\n");
+        Write(fd, &response, sizeof(response));
+      }
+      else
+      {
+        fprintf(stderr, "Latest block is different. Sending 1 as response\n");
+        response = 1;
+        Write(fd, &response, sizeof(response));
+
+        fprintf(stderr, "Sending block.");
+        sendBlock(fd, last);
+
+        pthread_rwlock_wrlock(&bchain_mtx);
+        addBlockToBlockchain(blockchain, new);
+        pthread_rwlock_unlock(&bchain_mtx);
+      }
+    }
+  }
+
+  fprintf(stderr, "***** BLOCKCHAIN SYNCED ******\n");
 
   pthread_rwlock_wrlock(&closed_flag);
   if(connection_closed)
@@ -497,12 +585,12 @@ void wallet_connection(void *arg)
   pthread_rwlock_rdlock(&node_mtx);
   for(int i = 0; i <= wallet_list_size; i++)
   {
-    if( wallet_list[i].fd == 0 && wallet_list[i].port == 0)
+    if( wallet_list[i].fd == 0 && wallet_list[i].port == 0) // if there is space: can connect
     {
       canconnect = 1;
       break;
     }
-    else if(wallet_list[i].port == n.port && !(strncmp(wallet_list[i].address, n.address, LEN_ADDRESS)))
+    else if(wallet_list[i].port == n.port && !(strncmp(wallet_list[i].address, n.address, LEN_ADDRESS))) // if already have you exit cicle cannot
       break;
   }
   pthread_rwlock_unlock(&node_mtx);
@@ -511,7 +599,7 @@ void wallet_connection(void *arg)
   {
     fd_open[fd] = 0;
     close(fd);
-    fprintf(stderr, "***** Can't connect right now... quitting connection ******\n");
+    fprintf(stderr, "***** Cannot connect right now... quitting connection ******\n");
     return;
     //pthread_exit(NULL);
   }
@@ -587,7 +675,7 @@ void receive_transaction(void *arg)
 
   //waiting rand sec
   fprintf(stderr,"Waiting %d sec \n", b->randomtime);
-  //sleep((unsigned int)b->randomtime);
+  sleep((unsigned int)b->randomtime);
 
   fprintf(stderr, "Block[%d]\n",b->n_block);
 
@@ -608,9 +696,9 @@ void receive_transaction(void *arg)
   addBlockToBlockchain(blockchain, b);
   pthread_rwlock_unlock(&bchain_mtx);
 
-  fprintf(stderr,"Added to blockchain\n\n");
+  fprintf(stderr,"Added to blockchain\n");
 
-  //spread_block();
+  spread_block(b, fd, true);
   //pthread_exit(NULL);
 }
 
@@ -619,20 +707,24 @@ void receive_block(void *arg)
 {
   int fd = *((int*)arg);
   free(arg);
-  // received from a thread
-  Block b = NULL;
-
+  Block b = (Block)Malloc(BLOCK_SIZE);
+  Block latest_in_bchain = blockchain->tail->info;
+  //send start int
   recvBlock(fd, b);
   fprintf(stderr,"Received new block\n");
 
-  pthread_rwlock_wrlock(&bchain_mtx);
-  addBlockToBlockchain(blockchain, b);
-  pthread_rwlock_unlock(&bchain_mtx);
 
-  //spread to others:
-  fprintf(stderr,"Start flooding\n");
-  spread_block(b, fd);
+  if(b->n_block == (blockchain->b_size)+1  && !compareBlockByInfo(b, latest_in_bchain)) // should compare also transaction
+  {
+    pthread_rwlock_wrlock(&bchain_mtx);
+    addBlockToBlockchain(blockchain, b);
+    pthread_rwlock_unlock(&bchain_mtx);
 
+    fprintf(stderr,"Start flooding\n");
+    spread_block(b, fd, false);
+  }
+  else
+    fprintf(stderr, "Already in my blockchain, why spreading?\n");
   //pthread_exit(NULL);
 }
 
@@ -924,7 +1016,7 @@ void n_routine()
             break;
           case BLOCK_SPREAD:
             fprintf(stderr,"******* Creating thread for receive_block (spreading) *******\n");
-            receive_transaction(arg);
+            receive_block(arg);
             //pthread_create(&tid[tid_index], NULL, receive_block, arg);
             break;
           default:
