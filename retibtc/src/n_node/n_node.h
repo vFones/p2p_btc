@@ -26,6 +26,7 @@
 #define MSG "Usage: ./n_node -p <PORT TO EXPOSE>\n"
 
 short service_port;
+struct sockaddr_in my_server_addr;
 
 node_t *node_list;
 int node_list_size;

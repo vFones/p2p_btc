@@ -134,11 +134,20 @@ void connect_to_network()
   request_t macro = NODE_CONNECTION;
   int canconnect = 0;
   int fd;
-  // try to connect to node_n node
-  // TODO: check ip address and retry
-  // TODO: check port
+
+  char myip[LEN_ADDRESS];
+
 
   choose_node(&new_conn);
+  inet_ntop(AF_INET, &my_server_addr.sin_addr, myip, sizeof(myip));
+
+  if( service_port == new_conn.n.port &&
+      ((strncmp(new_conn.n.address, myip, LEN_ADDRESS) == 0) ||
+       (strncmp(new_conn.n.address, "127.0.0.1", LEN_ADDRESS)) == 0) )
+  {
+    fprintf(stderr, "------ Trying to going in a deadlock. Be careful. ------\n");
+    return;
+  }
 
   pthread_rwlock_rdlock(&node_mtx);
   for(int i = 0; i <= node_list_size; i++)
@@ -758,7 +767,6 @@ void n_routine()
   int opt_value = 1;
   setsockopt(list_fd, SOL_SOCKET, SO_REUSEADDR, &opt_value, sizeof(int));
 
-  struct sockaddr_in my_server_addr;
   fillAddressIPv4(&my_server_addr, NULL, service_port);
 
   // bindin address:port to socket fd and setting a backlog
