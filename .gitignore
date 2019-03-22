@@ -63,5 +63,8 @@ build
 .idea/
 cmake-build-debug
 
+# VisualStudio Code
+.vscode
+
 # Mac OSX
 .DS_Store
