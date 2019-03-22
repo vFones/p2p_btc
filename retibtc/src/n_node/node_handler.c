@@ -283,9 +283,6 @@ void close_connection()
   if(node.confirm == 'y')
   {
 
-    fprintf(stderr, "Searching this: \n");
-    visit_node_list(node.n);
-
     pthread_rwlock_wrlock(&node_mtx);
     for (int i = 0; i < node_list_size; i++)
     {
