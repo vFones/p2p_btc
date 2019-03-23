@@ -78,7 +78,7 @@
   \chapter{Descrizione e schemi del protocollo applicazione}
   Di seguito sono riportati gli schemi dei principali protocolli applicazione.
   \section{Primo aggancio, scarico blockchain e flooding}
-Per capire meglio lo scenario illustrato, definiamo un Nodo\_0, un Nodo\_N, X Nodi e un wallet. Al Nodo\_N viene fatta richiesta di aggancio da parte del Nodo\_0, connesso a sua volta con X nodi e un wallet.\newline Inviando un tipo definito da programma, \textbf{request\_t}, il Nodo\_0 richiede al Nodo\_N di entrare a far parte della rete. A seguire i due Nodi si invieranno i size delle rispettive blockchain \textbf{locali}, in tal modo i due sapranno chi dovrà ricevere e chi dovrà inviare i blocchi. Ad ogni ricezione di un nuovo blocco verrà prontamente diffuso ai nodi X connessi e nel caso, al wallet.
+Per capire meglio lo scenario mostrato in figura, definiamo un Nodo\_0 e un Nodo\_N. Al Nodo\_N viene fatta richiesta di aggancio da parte del Nodo\_0, connesso a sua volta con più nodi e un wallet.\newline Inviando un tipo definito da programma, \textbf{request\_t}, il Nodo\_0 richiede al Nodo\_N di entrare a far parte della rete. Avvenuta la connessione bisognerà sincronizzare la blockchain, inviandosi i blocchi mancanti, per cui i nodi si scambieranno i size delle rispettive blockchain \textbf{locali}, in tal modo i due sapranno chi dovrà ricevere e chi dovrà inviare i blocchi. Ipotizzando che il Nodo\_N abbia la blockchain più aggiornata, ad ogni ricezione di un nuovo blocco, il Nodo\_0 lo diffonderà ai nodi X connessi e nel caso, al wallet.
   \begin{figure}[H]
   \center\includegraphics[scale=0.40]{hookpeer.png}
   \caption{Aggancio nodo.}
