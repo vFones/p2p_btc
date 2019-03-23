@@ -1,6 +1,0 @@
-@startuml
-[-> Peer: **FLOODING**
-Peer->Wallet: <richiesta di invio transazione>
-Wallet<-Peer: <invio struttura contenente transazione>
-hnote over Peer: **flooding**
-@enduml

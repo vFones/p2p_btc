@@ -7,22 +7,22 @@ storage peer2peer{
   node peer1
   node peer2
   node peer3
+  node peer4
+  node peer5
+  node peer6
 }
-database server
 
 peer0 -- peer2
 peer1 -- peer3
 peer3 -- peer0
 peer0 -- peer1
-
+peer4 -- peer2
+peer5 -- peer1
+peer5 -- peer6
+peer6 -- peer0
+peer5 -- peer2
+peer0 -- peer5
 wallet0 -> peer2
 wallet1 -> peer1
-wallet0 ~~> server
-wallet1 ~~> server
-
-peer0 ~~> server
-peer1 ~~> server
-peer2 ~~> server
-peer3 ~~> server
 
 @enduml

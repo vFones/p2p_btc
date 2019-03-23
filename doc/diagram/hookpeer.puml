@@ -1,34 +1,12 @@
 @startuml
-Peer -> Server: **AUTENTIFICAZIONE tramite SHA256**
-alt token valido
-  Server -> Peer: <short di conferma>
-  alt primo della rete
-    Server -> Peer: <Invio short 0>
-    Peer -> Server: <conferma creazione blocco genesi>
-    note right
-      aggiunta peer alla rete
-    end note
-  else ci sono altri peer
-    Server -> Peer: <numero di peer a cui connettersi>
-    Peer -> Server: pronto alla ricezione
-    loop numero di peer
-      Server -> Peer: Peer a cui connettersi
-      activate PeerN
-      Peer -> PeerN: richiesta AGGANCIO_PEER
-      PeerN -> Peer: <risposta>
-      Peer <--> PeerN: **SINCRONIZZAZIONE BLOCKCHAIN**
-      alt almeno uno connessione
-        Peer -> Server: conferma connessione
-        Server -> Peer
-        note right: aggiunta peer alla rete
-        else connessione fallita
-          Server -> Peer
-          note right: rifiuta
-      deactivate PeerN
-        end
-      end
-  end
-else token non valido
-  Server -> Peer: <short di errore>
-end
+activate Node_N
+Node_0 -> Node_N: <request_t> **NODE_CONNECTION**
+Node_N -> Node_0: <integer> BLOCKCHAIN_SIZE_N
+Node_0 -> Node_N: <integer> BLOCKCHAIN_SIZE_0
+Node_0 <-- Node_N: <block_t> Block #1
+Node_0 <-- Node_N: <block_t> Block #N
+deactivate Node_N
+Node_0 --> Node_X: <block_t> Block #X
+Node_0 --> Wallet_X: <trns_t> Transaction (Block #X)
+
 @enduml

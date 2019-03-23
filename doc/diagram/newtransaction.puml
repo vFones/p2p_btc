@@ -1,8 +1,10 @@
 @startuml
-hnote over Wallet: creazione transazione
-Wallet->Peer: invio transazione
-Wallet<-Peer: <short conferma>
-hnote over Peer: **sincronizzazione** in blockchain
-hnote over Peer: **flooding**
+hnote over Wallet: new transaction
+Wallet -> Nodo: <request_t> TRANSACTION
+Wallet->Nodo: <trns_t> transaction
+Wallet<-Nodo: <integer> confirma
+activate Nodo
+hnote over Nodo: ** add ** in blockchain
+hnote over Nodo: ** flooding **
 
 @enduml
