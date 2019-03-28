@@ -412,9 +412,9 @@ void node_connection(void* arg)
       pthread_rwlock_unlock(&bchain_mtx);
 
       diff++;
-      free(b);
       printf("Starting flooding\n");
       spread_block(b, fd, false);
+      free(b);
     }
   }
   else // DIFF = 0, must check integrity of blockchain
@@ -555,7 +555,7 @@ void receive_transaction(void *arg)
   Block new = getBlockFromNode(blockchain->tail);
   pthread_rwlock_unlock(&bchain_mtx);
 
-  //if created block is with already old ( aka received another block during waiting)
+  //if created block is already old ( aka received another block during waiting)
   if(b->n_block < new->n_block)
   {
     fprintf(stderr,"Recreating block\n");

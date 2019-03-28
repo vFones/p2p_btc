@@ -110,8 +110,8 @@ void wallet_routine()
   while (1)
   {
     FD_ZERO(&fset);
-  	FD_SET(node.fd, &fset); /* set for the socket */
-  	FD_SET(STDIN_FILENO, &fset); /* set for the standard input */
+    FD_SET(node.fd, &fset); /* set for the socket */
+    FD_SET(STDIN_FILENO, &fset); /* set for the standard input */
 
     print_menu();
     nread = select(maxfd, &fset , NULL , NULL , NULL);
@@ -125,7 +125,7 @@ void wallet_routine()
     /*******************
       STDIN menu_case
     *******************/
-  	if (FD_ISSET(STDIN_FILENO, &fset))
+    if (FD_ISSET(STDIN_FILENO, &fset))
     {
       fgets(line_buffer, 16, stdin);
       choice = atoi(line_buffer);
@@ -149,9 +149,9 @@ void wallet_routine()
     /***************************
       Socket connections
     ***************************/
-  	if (FD_ISSET(node.fd, &fset))
+    if (FD_ISSET(node.fd, &fset))
     {
-  	  ssize_t error = Read(node.fd, &request, sizeof(request));
+      ssize_t error = Read(node.fd, &request, sizeof(request));
 
       if(error)
       {
