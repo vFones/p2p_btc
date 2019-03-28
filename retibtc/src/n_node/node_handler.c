@@ -556,7 +556,7 @@ void receive_transaction(void *arg)
   pthread_rwlock_unlock(&bchain_mtx);
 
   //if created block is already old ( aka received another block during waiting)
-  if(b->n_block <= new->n_block)
+  if(b->n_block < new->n_block)
   {
     fprintf(stderr,"Recreating block\n");
     b = create_block(trns);
